@@ -57,9 +57,25 @@ DEPOSIT_ABI = json.loads('''
         "type": "event"
     },
     {
+        "anonymous": false,
+        "inputs": [
+            {"indexed": true, "name": "user", "type": "address"},
+            {"indexed": false, "name": "amount", "type": "uint256"}
+        ],
+        "name": "Withdraw",
+        "type": "event"
+    },
+    {
         "constant": false,
         "inputs": [{"name": "amount", "type": "uint256"}],
         "name": "deposit",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "constant": false,
+        "inputs": [{"name": "amount", "type": "uint256"}],
+        "name": "withdraw",
         "outputs": [],
         "type": "function"
     },
@@ -141,4 +157,46 @@ def verify_deposit_transaction(tx_hash, wallet_address, expected_amount=None):
         return True, amount
     except Exception as e:
         print(f"Error verifying deposit transaction: {e}")
+        return False, str(e)
+
+def verify_withdraw_transaction(tx_hash, wallet_address, expected_amount=None):
+    """
+    Verify a withdraw transaction on the HSK blockchain
+    """
+    try:
+        # Get transaction receipt
+        receipt = web3.eth.get_transaction_receipt(tx_hash)
+        
+        if not receipt or receipt['status'] != 1:
+            return False, "Transaction failed or not found"
+        
+        # Check if the transaction was sent to the deposit contract
+        if receipt['to'].lower() != DEPOSIT_CONTRACT_ADDRESS.lower():
+            return False, "Transaction was not sent to the deposit contract"
+        
+        # Look for Withdraw event
+        withdraw_event = deposit_contract.events.Withdraw().process_receipt(receipt)
+        
+        if not withdraw_event:
+            return False, "No Withdraw event found in transaction"
+        
+        # Verify the event data
+        event_data = withdraw_event[0]['args']
+        user = event_data['user']
+        amount = event_data['amount']
+        
+        # Check if the withdrawal was made by the correct user
+        if user.lower() != wallet_address.lower():
+            return False, "Withdrawal was made by a different user"
+        
+        # Check if the amount matches (if expected_amount is provided)
+        if expected_amount is not None:
+            decimals = hsk_token_contract.functions.decimals().call()
+            expected_amount_wei = int(expected_amount * (10 ** decimals))
+            if amount != expected_amount_wei:
+                return False, f"Withdrawal amount does not match. Expected: {expected_amount}, Actual: {amount / (10 ** decimals)}"
+        
+        return True, amount
+    except Exception as e:
+        print(f"Error verifying withdrawal transaction: {e}")
         return False, str(e)

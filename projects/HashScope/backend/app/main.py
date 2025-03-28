@@ -108,6 +108,19 @@ async function fetchUserProfile() {
   return await response.json();
 }
 ```
+
+## HSK Network Information
+
+- **Network Name**: HSK Network
+- **RPC URL**: https://mainnet.hsk.xyz
+- **Chain ID**: 177
+- **Block Explorer**: https://hashkey.blockscout.com
+
+## Smart Contract Addresses
+
+- **HSK Token Contract**: 0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d
+- **Deposit Contract**: 0x80304a385F52d256e52C5ADf5779F77F9d291fD2
+
 """,
     version="0.1.0",
     docs_url=None,  # 기본 /docs 경로 비활성화
@@ -162,3 +175,18 @@ async def get_open_api_endpoint():
         description=app.description,
         routes=app.routes,
     )
+
+@app.get("/", tags=["Root"])
+async def root():
+    return {
+        "message": "Welcome to HashScope API",
+        "docs": "/docs",
+        "network": "HSK Network",
+        "rpc_url": "https://mainnet.hsk.xyz",
+        "chain_id": 177,
+        "block_explorer": "https://hashkey.blockscout.com",
+        "contracts": {
+            "hsk_token": "0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d",
+            "deposit": "0x80304a385F52d256e52C5ADf5779F77F9d291fD2"
+        }
+    }
