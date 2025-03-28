@@ -20,6 +20,7 @@ class User(Base):
     
     # Relationships
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
+    deposits = relationship("DepositTransaction", back_populates="user")
     
     def __repr__(self):
         return f"<User wallet_address={self.wallet_address}>"
