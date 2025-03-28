@@ -1,270 +1,413 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+import os
 
-from app.db.database import get_db
-from app.models.user import User
-from app.models.deposit import DepositTransaction
-from app.schemas.user import UserResponse, UserWithBalance
-from app.schemas.deposit import DepositTransactionResponse
-from app.auth.dependencies import get_current_user
+from app.database import get_db
+from app.models import User, Transaction
 from app.blockchain.contracts import (
-    get_token_balance, 
-    get_deposit_balance, 
-    verify_deposit_transaction,
+    get_balance, 
+    get_contract_balance,
+    get_wallet_balance,
+    verify_deposit_transaction, 
     verify_withdraw_transaction,
-    DEPOSIT_CONTRACT_ADDRESS,
-    HSK_TOKEN_ADDRESS
+    verify_usage_deduction_transaction,
+    get_transaction_status,
+    build_deposit_transaction,
+    sign_transaction,
+    wei_to_hsk,
+    hsk_to_wei,
+    format_wei_to_hsk
+)
+from app.auth.dependencies import get_current_user, get_current_admin_user
+
+router = APIRouter(
+    prefix="/users",
+    tags=["users"],
+    responses={404: {"description": "Not found"}},
 )
 
-router = APIRouter()
+# 사용자 스키마
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    wallet_address: str
 
-class DepositNotifyRequest(BaseModel):
-    transaction_hash: str
-    amount: float
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+    wallet_address: str
+    balance: int = 0
 
-class WithdrawNotifyRequest(BaseModel):
-    transaction_hash: str
-    amount: float
+    class Config:
+        orm_mode = True
 
-@router.get("/me", response_model=UserWithBalance, summary="Get current user profile")
-async def get_current_user_profile(current_user: User = Depends(get_current_user)):
-    """
-    Get the profile of the currently authenticated user.
+# 트랜잭션 스키마
+class TransactionCreate(BaseModel):
+    user_id: int
+    tx_hash: str
+    amount: int
+    tx_type: str = "deposit"  # deposit, withdraw, usage
+    status: str = "pending"  # pending, confirmed, failed
+
+class TransactionResponse(BaseModel):
+    id: int
+    user_id: int
+    tx_hash: str
+    amount: int
+    tx_type: str
+    status: str
+    created_at: str
+
+    class Config:
+        orm_mode = True
+
+# 예치 요청 스키마
+class DepositRequest(BaseModel):
+    wallet_address: str
+    amount: int
+
+# 서명 요청 스키마
+class SignTransactionRequest(BaseModel):
+    wallet_address: str
+    amount: int
+    private_key: str = Field(..., description="개인 키는 서버에 저장되지 않으며 트랜잭션 서명에만 사용됩니다")
+
+# 서명 응답 스키마
+class SignTransactionResponse(BaseModel):
+    tx_hash: str
+    amount: int
+    message: str
+
+# 예치 응답 스키마
+class DepositResponse(BaseModel):
+    message: str
+    deposit_address: str
+    amount: int
+
+# 인출 요청 스키마
+class WithdrawRequest(BaseModel):
+    wallet_address: str
+    amount: int
+
+# 인출 응답 스키마
+class WithdrawResponse(BaseModel):
+    message: str
+    request_id: int
+
+# 인출 정보 응답 스키마
+class WithdrawInfoResponse(BaseModel):
+    message: str
+    deposit_contract: str
+
+# 사용량 차감 요청 스키마
+class UsageDeductRequest(BaseModel):
+    wallet_address: str
+    amount: int
+    recipient_address: str
+
+# 사용량 차감 응답 스키마
+class UsageDeductResponse(BaseModel):
+    message: str
+    request_id: int
+
+# 트랜잭션 알림 스키마
+class TransactionNotify(BaseModel):
+    tx_hash: str
+    tx_type: str = "deposit"  # deposit, withdraw, usage
+
+# 트랜잭션 상태 응답 스키마
+class TransactionStatusResponse(BaseModel):
+    status: str
+    message: Optional[str] = None
+
+# 사용자 생성
+@router.post("/", response_model=UserResponse)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = User(
+        username=user.username,
+        email=user.email,
+        wallet_address=user.wallet_address
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+# 사용자 목록 조회
+@router.get("/", response_model=List[UserResponse])
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    users = db.query(User).offset(skip).limit(limit).all()
+    return users
+
+# 사용자 상세 조회
+@router.get("/{user_id}", response_model=UserResponse)
+def read_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+# 사용자 잔액 조회
+@router.get("/{user_id}/balance")
+def read_user_balance(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
     
-    Requires authentication via JWT token.
-    """
-    return current_user
-
-@router.get("/balance", response_model=dict, summary="Get current user token balance")
-async def get_token_balance_endpoint(current_user: User = Depends(get_current_user)):
-    """
-    Get the HSK token balance of the currently authenticated user.
-    
-    Returns both the on-chain balance and the balance recorded in the database.
-    
-    Requires authentication via JWT token.
-    """
-    # Get on-chain balance (optional, can be expensive for frequent calls)
-    on_chain_balance = get_token_balance(current_user.wallet_address)
-    deposit_balance = get_deposit_balance(current_user.wallet_address)
+    # 블록체인에서 실제 잔액 조회
+    balance = get_balance(user.wallet_address)
     
     return {
-        "wallet_address": current_user.wallet_address,
-        "token_balance": current_user.token_balance,
-        "on_chain_balance": on_chain_balance,
-        "deposit_balance": deposit_balance,
-        "deposit_contract_address": DEPOSIT_CONTRACT_ADDRESS,
-        "token_contract_address": HSK_TOKEN_ADDRESS
+        "wallet_address": user.wallet_address,
+        "balance_wei": balance,
+        "balance_hsk": wei_to_hsk(balance),
+        "formatted_balance": format_wei_to_hsk(balance)
     }
 
-@router.get("/deposit/info", response_model=dict, summary="Get deposit information")
-async def get_deposit_info(current_user: User = Depends(get_current_user)):
-    """
-    Get information needed to deposit HSK tokens.
-    
-    Returns the deposit contract address and the user's wallet address.
-    
-    Requires authentication via JWT token.
-    
-    ## Contract Addresses
-    - **HSK Token Contract**: `0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d`
-    - **Deposit Contract**: `0x80304a385F52d256e52C5ADf5779F77F9d291fD2`
-    """
+# 예치 정보 조회
+@router.get("/deposit/info", response_model=DepositResponse)
+def get_deposit_info():
+    deposit_contract = os.getenv("DEPOSIT_CONTRACT_ADDRESS")
     return {
-        "wallet_address": current_user.wallet_address,
-        "token_contract_address": HSK_TOKEN_ADDRESS,
-        "deposit_contract_address": DEPOSIT_CONTRACT_ADDRESS,
-        "instructions": "To deposit HSK tokens, first approve the deposit contract to spend your tokens, then call the 'deposit' function on the deposit contract with the amount you want to deposit."
+        "message": "아래 주소로 HSK를 전송하여 예치할 수 있습니다.",
+        "deposit_address": deposit_contract,
+        "amount": 0
     }
 
-@router.post("/deposit/notify", response_model=dict, summary="Notify backend of token deposit")
-async def notify_token_deposit(
-    deposit_data: DepositNotifyRequest = Body(...),
+# 트랜잭션 서명 및 전송
+@router.post("/deposit/sign", response_model=SignTransactionResponse)
+async def sign_deposit_transaction(
+    request: SignTransactionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    사용자의 개인 키를 사용하여 예치 트랜잭션에 서명하고 전송합니다.
+    
+    - **wallet_address**: 사용자 지갑 주소
+    - **amount**: 예치할 금액 (wei 단위)
+    - **private_key**: 개인 키 (서버에 저장되지 않음)
+    
+    Returns:
+        서명된 트랜잭션 해시
+    """
+    # 사용자 인증 확인
+    if current_user.wallet_address.lower() != request.wallet_address.lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only sign transactions for your own wallet"
+        )
+    
+    try:
+        # 트랜잭션 생성
+        tx = build_deposit_transaction(
+            from_address=request.wallet_address,
+            amount_wei=request.amount
+        )
+        
+        # 트랜잭션 서명 및 전송
+        tx_hash = sign_transaction(request.private_key, tx)
+        
+        return {
+            "tx_hash": tx_hash,
+            "amount": request.amount,
+            "message": f"트랜잭션이 성공적으로 서명되어 전송되었습니다. 트랜잭션 해시: {tx_hash}"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"트랜잭션 서명 중 오류가 발생했습니다: {str(e)}"
+        )
+
+# 예치 트랜잭션 알림
+@router.post("/deposit/notify", response_model=TransactionStatusResponse)
+def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends(get_db)):
+    try:
+        # 트랜잭션 검증
+        verification = verify_deposit_transaction(tx_data.tx_hash)
+        
+        if verification["success"]:
+            # 사용자 조회
+            user = db.query(User).filter(User.wallet_address == verification["user"]).first()
+            
+            if not user:
+                # 새 사용자 생성
+                user = User(
+                    username=f"user_{verification['user'][:8]}",
+                    email=f"user_{verification['user'][:8]}@example.com",
+                    wallet_address=verification["user"]
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            
+            # 트랜잭션 기록
+            tx = Transaction(
+                user_id=user.id,
+                tx_hash=tx_data.tx_hash,
+                amount=verification["amount"],
+                tx_type="deposit",
+                status="confirmed"
+            )
+            db.add(tx)
+            db.commit()
+            
+            return {"status": "success", "message": "Deposit transaction verified and recorded"}
+        else:
+            return {"status": "failed", "message": verification["message"]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# 인출 정보 조회
+@router.get("/withdraw/info", response_model=WithdrawInfoResponse)
+def get_withdraw_info():
+    deposit_contract = os.getenv("DEPOSIT_CONTRACT_ADDRESS")
+    return {
+        "message": "인출은 관리자만 수행할 수 있습니다. 인출 요청을 제출하면 관리자가 처리합니다.",
+        "deposit_contract": deposit_contract
+    }
+
+# 인출 요청
+@router.post("/withdraw/request", response_model=WithdrawResponse)
+def request_withdraw(
+    request: WithdrawRequest, 
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Notify the backend of a token deposit transaction.
-    
-    This endpoint should be called after a successful deposit transaction on the blockchain.
-    The backend will verify the transaction and update the user's token balance.
-    
-    - **transaction_hash**: The transaction hash of the deposit
-    - **amount**: The amount of tokens deposited
-    
-    Requires authentication via JWT token.
-    
-    ## Contract Addresses
-    - **HSK Token Contract**: `0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d`
-    - **Deposit Contract**: `0x80304a385F52d256e52C5ADf5779F77F9d291fD2`
-    """
-    # Check if this transaction has already been processed
-    existing_tx = db.query(DepositTransaction).filter(
-        DepositTransaction.transaction_hash == deposit_data.transaction_hash
-    ).first()
-    
-    if existing_tx:
+    # 사용자 인증 확인
+    if current_user.wallet_address.lower() != request.wallet_address.lower():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This transaction has already been processed"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only request withdrawals for your own wallet"
         )
     
-    # Verify the transaction on the blockchain
-    is_valid, result = verify_deposit_transaction(
-        deposit_data.transaction_hash, 
-        current_user.wallet_address,
-        deposit_data.amount
-    )
+    # 잔액 확인
+    balance = get_balance(request.wallet_address)
+    if balance < request.amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Insufficient balance. Available: {balance}, Requested: {request.amount}"
+        )
     
-    # Create a deposit transaction record
-    deposit_tx = DepositTransaction(
+    # 인출 요청 기록
+    tx = Transaction(
         user_id=current_user.id,
-        transaction_hash=deposit_data.transaction_hash,
-        amount=deposit_data.amount,
+        tx_hash="pending",
+        amount=request.amount,
+        tx_type="withdraw_request",
         status="pending"
     )
-    
-    db.add(deposit_tx)
+    db.add(tx)
     db.commit()
+    db.refresh(tx)
     
-    if not is_valid:
-        deposit_tx.status = "failed"
-        db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid deposit transaction: {result}"
-        )
-    
-    # Update the user's token balance
-    # If result is a number (amount), use it, otherwise use the amount from the request
-    amount_to_add = deposit_data.amount
-    if isinstance(result, (int, float)):
-        amount_to_add = float(result)
-    
-    current_user.token_balance += amount_to_add
-    deposit_tx.status = "completed"
-    db.commit()
-    
-    return {
-        "success": True,
-        "new_balance": current_user.token_balance,
-        "transaction_hash": deposit_data.transaction_hash,
-        "amount_added": amount_to_add
-    }
+    return {"message": "Withdrawal request submitted successfully", "request_id": tx.id}
 
-@router.get("/withdraw/info", response_model=dict, summary="Get withdraw information")
-async def get_withdraw_info(current_user: User = Depends(get_current_user)):
-    """
-    Get information needed to withdraw HSK tokens.
-    
-    Returns the deposit contract address and the user's wallet address.
-    
-    Requires authentication via JWT token.
-    
-    ## Contract Addresses
-    - **HSK Token Contract**: `0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d`
-    - **Deposit Contract**: `0x80304a385F52d256e52C5ADf5779F77F9d291fD2`
-    """
-    deposit_balance = get_deposit_balance(current_user.wallet_address)
-    
-    return {
-        "wallet_address": current_user.wallet_address,
-        "deposit_contract_address": DEPOSIT_CONTRACT_ADDRESS,
-        "deposit_balance": deposit_balance,
-        "instructions": "To withdraw HSK tokens, call the 'withdraw' function on the deposit contract with the amount you want to withdraw."
-    }
-
-@router.post("/withdraw/notify", response_model=dict, summary="Notify backend of token withdrawal")
-async def notify_token_withdraw(
-    withdraw_data: WithdrawNotifyRequest = Body(...),
-    current_user: User = Depends(get_current_user),
+# 인출 트랜잭션 알림
+@router.post("/withdraw/notify", response_model=TransactionStatusResponse)
+def notify_withdraw_transaction(
+    tx_data: TransactionNotify, 
+    current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Notify the backend of a token withdrawal transaction.
-    
-    This endpoint should be called after a successful withdrawal transaction on the blockchain.
-    The backend will verify the transaction and update the user's token balance.
-    
-    - **transaction_hash**: The transaction hash of the withdrawal
-    - **amount**: The amount of tokens withdrawn
-    
-    Requires authentication via JWT token.
-    
-    ## Contract Addresses
-    - **HSK Token Contract**: `0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d`
-    - **Deposit Contract**: `0x80304a385F52d256e52C5ADf5779F77F9d291fD2`
-    """
-    # Check if this transaction has already been processed
-    existing_tx = db.query(DepositTransaction).filter(
-        DepositTransaction.transaction_hash == withdraw_data.transaction_hash
-    ).first()
-    
-    if existing_tx:
+    try:
+        # 트랜잭션 검증
+        verification = verify_withdraw_transaction(tx_data.tx_hash)
+        
+        if verification["success"]:
+            # 사용자 조회
+            user = db.query(User).filter(User.wallet_address == verification["user"]).first()
+            
+            if not user:
+                return {"status": "failed", "message": "User not found"}
+            
+            # 트랜잭션 기록
+            tx = Transaction(
+                user_id=user.id,
+                tx_hash=tx_data.tx_hash,
+                amount=verification["amount"],
+                tx_type="withdraw",
+                status="confirmed"
+            )
+            db.add(tx)
+            db.commit()
+            
+            return {"status": "success", "message": "Withdraw transaction verified and recorded"}
+        else:
+            return {"status": "failed", "message": verification["message"]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# 사용량 차감 요청
+@router.post("/usage/deduct", response_model=UsageDeductResponse)
+def deduct_for_usage(
+    request: UsageDeductRequest, 
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    # 잔액 확인
+    balance = get_balance(request.wallet_address)
+    if balance < request.amount:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This transaction has already been processed"
+            detail=f"Insufficient balance. Available: {balance}, Requested: {request.amount}"
         )
     
-    # Verify the transaction on the blockchain
-    is_valid, result = verify_withdraw_transaction(
-        withdraw_data.transaction_hash, 
-        current_user.wallet_address,
-        withdraw_data.amount
-    )
+    # 사용자 조회
+    user = db.query(User).filter(User.wallet_address == request.wallet_address).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
     
-    # Create a withdrawal transaction record
-    withdraw_tx = DepositTransaction(
-        user_id=current_user.id,
-        transaction_hash=withdraw_data.transaction_hash,
-        amount=-withdraw_data.amount,  # Negative amount for withdrawals
+    # 사용량 차감 요청 기록
+    tx = Transaction(
+        user_id=user.id,
+        tx_hash="pending",
+        amount=request.amount,
+        tx_type="usage_request",
         status="pending"
     )
-    
-    db.add(withdraw_tx)
+    db.add(tx)
     db.commit()
+    db.refresh(tx)
     
-    if not is_valid:
-        withdraw_tx.status = "failed"
-        db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid withdrawal transaction: {result}"
-        )
-    
-    # Update the user's token balance
-    # If result is a number (amount), use it, otherwise use the amount from the request
-    amount_to_subtract = withdraw_data.amount
-    if isinstance(result, (int, float)):
-        amount_to_subtract = float(result)
-    
-    current_user.token_balance -= amount_to_subtract
-    withdraw_tx.status = "completed"
-    db.commit()
-    
-    return {
-        "success": True,
-        "new_balance": current_user.token_balance,
-        "transaction_hash": withdraw_data.transaction_hash,
-        "amount_withdrawn": amount_to_subtract
-    }
+    return {"message": "Usage deduction request submitted successfully", "request_id": tx.id}
 
-@router.get("/deposit/history", response_model=List[DepositTransactionResponse], summary="Get deposit history")
-async def get_deposit_history(
-    current_user: User = Depends(get_current_user),
+# 사용량 차감 트랜잭션 알림
+@router.post("/usage/notify", response_model=TransactionStatusResponse)
+def notify_usage_deduction_transaction(
+    tx_data: TransactionNotify, 
+    current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Get the deposit history for the current user.
-    
-    Returns a list of deposit transactions.
-    
-    Requires authentication via JWT token.
-    """
-    deposits = db.query(DepositTransaction).filter(
-        DepositTransaction.user_id == current_user.id
-    ).order_by(DepositTransaction.created_at.desc()).all()
-    
-    return deposits
+    try:
+        # 트랜잭션 검증
+        verification = verify_usage_deduction_transaction(tx_data.tx_hash)
+        
+        if verification["success"]:
+            # 사용자 조회
+            user = db.query(User).filter(User.wallet_address == verification["user"]).first()
+            
+            if not user:
+                return {"status": "failed", "message": "User not found"}
+            
+            # 트랜잭션 기록
+            tx = Transaction(
+                user_id=user.id,
+                tx_hash=tx_data.tx_hash,
+                amount=verification["amount"],
+                tx_type="usage_deduction",
+                status="confirmed"
+            )
+            db.add(tx)
+            db.commit()
+            
+            return {"status": "success", "message": "Usage deduction transaction verified and recorded"}
+        else:
+            return {"status": "failed", "message": verification["message"]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

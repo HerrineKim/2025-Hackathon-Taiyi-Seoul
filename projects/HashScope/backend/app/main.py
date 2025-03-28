@@ -1,12 +1,15 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
-from sqlalchemy.orm import Session
+import os
 
-from app.db.database import get_db, init_db
-from app.routers import auth, users, api_keys
+from app.routers import users, auth, api_keys
+from app.database import engine, Base, init_db, get_db
 from app.auth.dependencies import get_current_user
+
+# 데이터베이스 초기화
+init_db()
 
 app = FastAPI(
     title="HashScope API",
@@ -119,7 +122,7 @@ async function fetchUserProfile() {
 ## Smart Contract Addresses
 
 - **HSK Token Contract**: 0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d
-- **Deposit Contract**: 0x80304a385F52d256e52C5ADf5779F77F9d291fD2
+- **Deposit Contract**: 0x2fA7FCFB4935963EB3B9ec2Def931b28a2Ff349f
 
 """,
     version="0.1.0",
@@ -127,28 +130,73 @@ async function fetchUserProfile() {
     redoc_url=None,  # 기본 /redoc 경로 비활성화
 )
 
-# CORS configuration
+# CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development, restrict in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize database on startup
-@app.on_event("startup")
-async def startup_event():
-    init_db()
-
-# Include routers
+# 라우터 등록
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(api_keys.router, prefix="/api-keys", tags=["API Keys"])
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to HashScope API", "status": "online"}
+# 커스텀 OpenAPI 스키마 정의
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title="HashScope API",
+        version="1.0.0",
+        description="""
+# HashScope API
+
+HashScope API는 HSK 네트워크의 네이티브 HSK를 관리하기 위한 API입니다.
+
+## 주요 기능
+
+### 1. 예치(Deposit)
+- 사용자는 네이티브 HSK를 예치 컨트랙트에 예치할 수 있습니다.
+- 예치는 컨트랙트의 `deposit()` 함수를 호출하거나 직접 HSK를 전송하여 수행할 수 있습니다.
+
+### 2. 인출(Withdraw)
+- 인출은 관리자만 수행할 수 있습니다.
+- 사용자는 인출 요청을 제출하고, 관리자가 이를 처리합니다.
+
+### 3. 사용량 차감(Usage Deduction)
+- 관리자는 사용자의 사용량에 따라 HSK를 차감할 수 있습니다.
+- 차감된 HSK는 지정된 수신자 주소로 전송됩니다.
+
+## 컨트랙트 주소
+- **HSK 예치 컨트랙트**: `{deposit_contract_address}`
+
+## 참고 사항
+- HSK 네트워크의 RPC URL: `{hsk_rpc_url}`
+- 모든 금액은 wei 단위로 표시됩니다 (1 HSK = 10^18 wei).
+        """.format(
+            deposit_contract_address=os.getenv("DEPOSIT_CONTRACT_ADDRESS", "0x0D313B22601E7AD450DC9b8b78aB0b0014022269"),
+            hsk_rpc_url=os.getenv("HSK_RPC_URL", "https://mainnet.hsk.xyz")
+        ),
+        routes=app.routes,
+    )
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
+@app.get("/", tags=["root"])
+async def root():
+    return {
+        "message": "Welcome to HashScope API",
+        "docs": "/docs",
+        "deposit_contract": os.getenv("DEPOSIT_CONTRACT_ADDRESS", "0x0D313B22601E7AD450DC9b8b78aB0b0014022269"),
+        "hsk_rpc_url": os.getenv("HSK_RPC_URL", "https://mainnet.hsk.xyz")
+    }
 
 @app.get("/health")
 def health_check():
@@ -175,18 +223,3 @@ async def get_open_api_endpoint():
         description=app.description,
         routes=app.routes,
     )
-
-@app.get("/", tags=["Root"])
-async def root():
-    return {
-        "message": "Welcome to HashScope API",
-        "docs": "/docs",
-        "network": "HSK Network",
-        "rpc_url": "https://mainnet.hsk.xyz",
-        "chain_id": 177,
-        "block_explorer": "https://hashkey.blockscout.com",
-        "contracts": {
-            "hsk_token": "0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d",
-            "deposit": "0x80304a385F52d256e52C5ADf5779F77F9d291fD2"
-        }
-    }

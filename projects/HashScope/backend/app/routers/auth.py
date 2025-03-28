@@ -4,13 +4,31 @@ from sqlalchemy.orm import Session
 import secrets
 import string
 
-from app.db.database import get_db
-from app.models.user import User
-from app.schemas.auth import NonceRequest, NonceResponse, VerifySignatureRequest, TokenResponse
+from app.database import get_db
+from app.models import User
 from app.auth.wallet import create_auth_message, verify_signature, generate_nonce
 from app.auth.jwt import create_access_token
+from pydantic import BaseModel
 
 router = APIRouter()
+
+# 스키마 정의
+class NonceRequest(BaseModel):
+    wallet_address: str
+
+class NonceResponse(BaseModel):
+    wallet_address: str
+    nonce: str
+    message: str
+
+class VerifySignatureRequest(BaseModel):
+    wallet_address: str
+    signature: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    wallet_address: str
+    token_type: str = "bearer"
 
 @router.post("/nonce", response_model=NonceResponse, summary="Get authentication nonce")
 async def get_nonce(request: NonceRequest, db: Session = Depends(get_db)):
@@ -35,7 +53,9 @@ async def get_nonce(request: NonceRequest, db: Session = Depends(get_db)):
         user.nonce = nonce
     else:
         # Create new user
-        user = User(wallet_address=wallet_address, nonce=nonce)
+        username = f"user_{secrets.token_hex(4)}"
+        email = f"{username}@example.com"
+        user = User(wallet_address=wallet_address, username=username, email=email)
         db.add(user)
     
     db.commit()
@@ -89,6 +109,5 @@ async def verify_wallet_signature(request: VerifySignatureRequest, db: Session =
     
     return TokenResponse(
         access_token=access_token,
-        wallet_address=wallet_address,
-        token_balance=user.token_balance
+        wallet_address=wallet_address
     )

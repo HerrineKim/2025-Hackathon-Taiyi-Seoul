@@ -14,7 +14,7 @@ module.exports = {
   solidity: "0.8.20",
   networks: {
     // HSK 메인넷 설정
-    hskMainnet: {
+    hsk: {
       url: HSK_RPC_URL,
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
       chainId: 177 // HSK 네트워크의 실제 체인 ID: 177
@@ -27,11 +27,11 @@ module.exports = {
   // Blockscout 검증 설정
   etherscan: {
     apiKey: {
-      hskMainnet: BLOCKSCOUT_API_KEY
+      hsk: BLOCKSCOUT_API_KEY
     },
     customChains: [
       {
-        network: "hskMainnet",
+        network: "hsk",
         chainId: 177, // HSK 네트워크의 실제 체인 ID: 177
         urls: {
           apiURL: `${BLOCKSCOUT_URL}/api`,
