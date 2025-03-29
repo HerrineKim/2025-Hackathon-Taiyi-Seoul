@@ -143,7 +143,7 @@ export default function HotPage() {
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-gray-400">
-                    #{index + 1}
+                    #{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                   </div>
                 </div>
               </div>
