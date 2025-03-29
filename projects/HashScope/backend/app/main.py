@@ -29,7 +29,7 @@ HashScope는 AI 에이전트에 실시간 크립토 시장 데이터를 제공�
 ## 인증 방식
 
 1. 지갑 인증: `/auth/nonce`와 `/auth/verify` 엔드포인트를 통해 지갑 서명 기반 인증
-2. API 키 인증: 데이터 API 호출 시 발급받은 API 키 사용
+2. API 키 인증: 데이터 API 호출 시 발급받은 API 키 ID와 Secret 모두 사용 (중요: 두 값 모두 필수)
 
 ## 지갑 로그인 플로우
 
@@ -175,6 +175,35 @@ HashScope API는 HSK 네트워크의 네이티브 HSK를 관리하기 위한 API
 - 관리자는 사용자의 사용량에 따라 HSK를 차감할 수 있습니다.
 - 차감된 HSK는 지정된 수신자 주소로 전송됩니다.
 
+## API 키 인증 방식 (중요 업데이트)
+
+모든 API 엔드포인트는 두 개의 헤더를 통한 인증이 필요합니다:
+
+1. `api-key-id`: API 키 ID (예: hsk_1234567890abcdef)
+2. `api-key-secret`: API 키 Secret (예: sk_1234567890abcdef1234567890abcdef)
+
+두 값 모두 API 키 발급 시 제공되며, 모든 요청에 반드시 포함되어야 합니다.
+
+### API 키 인증 예시 (cURL)
+
+```bash
+curl -X GET "https://api.hashscope.io/crypto/btc-price" \\
+     -H "api-key-id: hsk_your_api_key_id" \\
+     -H "api-key-secret: sk_your_api_key_secret"
+```
+
+### API 키 인증 예시 (JavaScript)
+
+```javascript
+const response = await fetch('https://api.hashscope.io/crypto/btc-price', {
+  method: 'GET',
+  headers: {
+    'api-key-id': 'hsk_your_api_key_id',
+    'api-key-secret': 'sk_your_api_key_secret'
+  }
+});
+```
+
 ## 컨트랙트 주소
 - **HSK 예치 컨트랙트**: `{deposit_contract_address}`
 
@@ -187,6 +216,36 @@ HashScope API는 HSK 네트워크의 네이티브 HSK를 관리하기 위한 API
         ),
         routes=app.routes,
     )
+    
+    # API 키 인증 보안 스키마 정의
+    openapi_schema["components"]["securitySchemes"] = {
+        "ApiKeyId": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "api-key-id",
+            "description": "API 키 ID (필수)"
+        },
+        "ApiKeySecret": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "api-key-secret",
+            "description": "API 키 Secret (필수)"
+        }
+    }
+    
+    # 모든 API 엔드포인트에 보안 요구사항 적용
+    if "security" not in openapi_schema:
+        openapi_schema["security"] = []
+    
+    # 기본적으로 모든 엔드포인트에 API 키 인증 적용 (auth 관련 엔드포인트 제외)
+    for path in openapi_schema["paths"]:
+        # auth 관련 엔드포인트는 제외
+        if not path.startswith("/auth") and not path == "/" and not path == "/health":
+            for method in openapi_schema["paths"][path]:
+                if "security" not in openapi_schema["paths"][path][method]:
+                    openapi_schema["paths"][path][method]["security"] = [
+                        {"ApiKeyId": [], "ApiKeySecret": []}
+                    ]
     
     app.openapi_schema = openapi_schema
     return app.openapi_schema
