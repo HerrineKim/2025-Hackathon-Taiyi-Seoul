@@ -1,4 +1,4 @@
-import { Home, Flame, Search, Info, Activity, User } from "lucide-react"
+import { Home, Flame, Search, Info, Activity, User, Key } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -9,6 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import Image from "next/image"
 
 const mainItems = [
   {
@@ -44,6 +45,11 @@ const myItems = [
     url: "/my/profile",
     icon: User,
   },
+  {
+    title: "Secret",
+    url: "/secret",
+    icon: Key,
+  },
 ]
 
 export function AppSidebar() {
@@ -52,7 +58,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="mb-4">
-            Main Menu
+            <Image src="/logo-500.png" alt="logo" width={32} height={32} />
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
