@@ -221,9 +221,10 @@ export default function DepositPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-800">
-      <div className="container mx-auto p-6">
-        <h1 className="text-4xl font-bold text-white mb-6">Deposit</h1>
+    <div className="min-h-screen bg-gray-800 p-6">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4 text-white">Deposit</h1>
+        <p className="text-gray-300 mb-6">Deposit HSK tokens to your account using your HashKey wallet.</p>
         <Card className="bg-gray-700 border-gray-600">
           <CardHeader>
             <CardTitle className="text-white">Deposit Information</CardTitle>

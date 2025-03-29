@@ -32,7 +32,6 @@ const getCategoryIcon = (category: string) => {
 
 export default function HotPage() {
   const [selectedCategory, setSelectedCategory] = React.useState<string>("all");
-  const [currentSuggestion, setCurrentSuggestion] = React.useState(0);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [apis, setApis] = React.useState<APICatalogItem[]>([]);
   const [categories, setCategories] = React.useState<APICategoriesResponse>({});
@@ -56,13 +55,6 @@ export default function HotPage() {
 
     fetchData();
   }, [selectedCategory]);
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSuggestion((prev) => (prev + 1) % apis.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [apis.length]);
 
   const totalPages = Math.ceil(apis.length / ITEMS_PER_PAGE);
   const paginatedAPIs = apis.slice(
@@ -90,14 +82,22 @@ export default function HotPage() {
         <div className="relative mb-12">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg blur-xl"></div>
           <div className="relative bg-gray-700/50 rounded-lg p-8 backdrop-blur-sm">
-            <div className="flex items-center justify-center space-x-2">
+            <div className="flex items-center space-x-2 mb-4">
               <Flame className="w-5 h-5 text-orange-400" />
-              <div className="text-xl text-white font-medium">
-                Trending now:{" "}
-                <span className="text-orange-400 animate-fade-in-out">
-                  {apis[currentSuggestion]?.summary || "Loading..."}
-                </span>
-              </div>
+              <div className="text-xl text-white font-medium">Popular APIs</div>
+            </div>
+            <div className="space-y-3">
+              {apis.slice(0, 5).map((api, index) => (
+                <div key={api.path} className="flex items-center space-x-3 group">
+                  <div className="text-lg font-bold text-gray-400 w-6">{index + 1}</div>
+                  <div className="flex-1">
+                    <div className="text-white group-hover:text-orange-400 transition-colors">
+                      {api.summary}
+                    </div>
+                    <div className="text-sm text-gray-400">{api.category}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function HotPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {paginatedAPIs.map((api) => (
+          {paginatedAPIs.map((api, index) => (
             <div
               key={api.path}
               className="bg-gray-700 rounded-lg p-6 hover:bg-gray-600 transition-colors"
@@ -142,12 +142,9 @@ export default function HotPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="flex items-center space-x-2 text-green-400">
-                    <Flame className="w-4 h-4" />
-                    <span className="text-sm">+{Math.floor(Math.random() * 30) + 10}%</span>
+                  <div className="text-2xl font-bold text-gray-400">
+                    #{index + 1}
                   </div>
-                  <div className="text-sm text-gray-400 mt-1">Method</div>
-                  <div className="text-white font-medium">{api.method}</div>
                 </div>
               </div>
               <p className="mt-4 text-gray-300">{api.description}</p>

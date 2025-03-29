@@ -26,7 +26,7 @@ export default function Home() {
             An HSK Chain-based tokenized API platform providing real-time crypto data for Al agents.
           </p>
           <Link
-            href={connected ? "/hot" : "/my/deposit"}
+            href={connected ? "/hot" : "/my/profile"}
             className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-lg transition-colors"
           >
             {connected ? 'Explore Hot APIs' : 'Get Started'} <ArrowRight className="ml-2 w-5 h-5" />
