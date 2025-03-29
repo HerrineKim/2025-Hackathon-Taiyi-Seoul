@@ -51,7 +51,7 @@ export default function SecretPage() {
   const fetchApiKeys = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api-keys/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api-keys/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
         }
@@ -71,7 +71,7 @@ export default function SecretPage() {
     e.preventDefault();
     try {
       setIsLoading(true);
-      const response = await fetch('/api-keys/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api-keys/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

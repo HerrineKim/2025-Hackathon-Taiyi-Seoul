@@ -5,8 +5,6 @@ import Image from 'next/image';
 import { useSDK } from '@metamask/sdk-react';
 import type Web3 from 'web3';
 
-const API_BASE_URL = 'https://hashkey.sungwoonsong.com';
-
 interface NonceResponse {
   wallet_address: string;
   nonce: string;
@@ -137,7 +135,7 @@ export default function MetaMaskAuth() {
       localStorage.setItem('account', newAccount);
 
       // 2. Get nonce from backend
-      const nonceResponse = await fetch(`${API_BASE_URL}/auth/nonce`, {
+      const nonceResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/nonce`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -161,7 +159,7 @@ export default function MetaMaskAuth() {
       }) as string;
 
       // 4. Verify signature with backend
-      const verifyResponse = await fetch(`${API_BASE_URL}/auth/verify`, {
+      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
