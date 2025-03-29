@@ -240,7 +240,7 @@ def deduct_for_usage(user_address, amount_wei, recipient_address):
     
     Args:
         user_address (str): 사용자 지갑 주소
-        amount_wei (int): 차감할 금액 (wei 단위)
+        amount_wei (int or float): 차감할 금액 (wei 단위)
         recipient_address (str): 수수료 수취 주소
         
     Returns:
@@ -254,10 +254,13 @@ def deduct_for_usage(user_address, amount_wei, recipient_address):
         user_address = Web3.to_checksum_address(user_address)
         recipient_address = Web3.to_checksum_address(recipient_address)
         
+        # float 타입을 int 타입으로 변환 (Solidity uint256과 호환)
+        amount_wei_int = int(amount_wei)
+        
         # 사용자의 현재 잔액 확인
         balance = deposit_contract.functions.getBalance(user_address).call()
-        if balance < amount_wei:
-            return False, f"잔액 부족: {wei_to_hsk(balance)} HSK (필요: {wei_to_hsk(amount_wei)} HSK)"
+        if balance < amount_wei_int:
+            return False, f"잔액 부족: {wei_to_hsk(balance)} HSK (필요: {wei_to_hsk(amount_wei_int)} HSK)"
         
         # 트랜잭션 생성
         nonce = w3.eth.get_transaction_count(w3.eth.account.from_key(CONTRACT_OWNER_PRIVATE_KEY).address)
@@ -266,7 +269,7 @@ def deduct_for_usage(user_address, amount_wei, recipient_address):
         # deductForUsage 함수 호출 트랜잭션 생성
         tx = deposit_contract.functions.deductForUsage(
             user_address,
-            amount_wei,
+            amount_wei_int,  # int 타입으로 변환된 값 사용
             recipient_address
         ).build_transaction({
             'chainId': w3.eth.chain_id,

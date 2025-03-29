@@ -11,8 +11,9 @@ import requests
 import time
 import json
 from datetime import datetime
-
 from dotenv import load_dotenv
+import os
+
 load_dotenv()
 
 API_KEY_ID = os.getenv("API_KEY_ID")
