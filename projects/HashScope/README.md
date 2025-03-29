@@ -4,7 +4,11 @@ HashScope
 
 ## Overview
 
-This project builds an API platform on the HSK blockchain, providing real-time crypto market data for AI agents to predict market trends and execute automated trades. Users log in with their wallets, stake a certain amount of HSK tokens, and receive a Secret Key to access the API. Fees are charged based on API usage, deducted directly from staked tokens. Additionally, individuals can contribute their own data sources to the platform and earn HSK rewards when their data is utilized, creating a sustainable data economy.
+HashScope is an API platform built on the HSK blockchain that bridges real-world data with blockchain technology, rewarding data contributors with HSK tokens. Our platform provides high-quality, real-time data through standardized APIs, while also offering Model Context Protocol (MCP) integration to make this data easily accessible to AI agents.
+
+Users connect their HSK wallets, stake HSK tokens, and receive API keys to access our comprehensive data ecosystem. As they consume data, fees are automatically deducted from their staked tokens and distributed to data providers, creating a sustainable data economy. This token-based incentive system enables us to connect the physical world with blockchain by rewarding those who contribute valuable data sources.
+
+Our core mission is to create a decentralized bridge between real-world information and blockchain technology, using HSK as the connecting medium. By standardizing diverse data sources—from cryptocurrency markets and social media trends to blockchain project updates—we empower AI agents to make informed decisions while ensuring data providers are fairly compensated for their contributions.
 
 ![image](https://github.com/user-attachments/assets/e93b9f1f-ec79-4371-bc52-b4f1e3122938)
 
@@ -131,37 +135,3 @@ The main contract that handles HSK token deposits and usage fee deductions.
 
 The smart contracts are deployed on the HSK blockchain at the following addresses:
 - HSKDeposit: `0x0D313B22601E7AD450DC9b8b78aB0b0014022269`
-
-## API Usage Examples
-
-```bash
-curl -X GET \
-  https://hashkey.sungwoonsong.com/api/crypto/btc/usd \
-  -H 'api-key-id: your_api_key_id' \
-  -H 'api-key-secret: your_api_key_secret'
-```
-
-```bash
-curl -X POST \
-  https://hashkey.sungwoonsong.com/api/api-keys \
-  -H 'Content-Type: application/json' \
-  -d '{"name": "My API Key", "description": "This is my API key"}'
-```
-
-```bash
-curl -X GET \
-  https://hashkey.sungwoonsong.com/api/api-keys/{key_id} \
-  -H 'Content-Type: application/json'
-```
-
-```bash
-curl -X GET \
-  https://hashkey.sungwoonsong.com/api/api-keys/{key_id}/usage \
-  -H 'Content-Type: application/json'
-```
-
-```bash
-curl -X GET \
-  https://hashkey.sungwoonsong.com/api/api-keys/{key_id}/history \
-  -H 'Content-Type: application/json'
-```
