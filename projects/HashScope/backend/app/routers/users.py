@@ -237,7 +237,7 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
             )
             db.add(user)
             db.commit()
-            db.refresh(user)
+            db.refresh(user)  # 이 부분이 중요합니다 - ID를 가져오기 위해 refresh 필요
         
         # 트랜잭션 기록
         tx = db.query(Transaction).filter(Transaction.tx_hash == tx_data.tx_hash).first()
@@ -245,7 +245,7 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
         if not tx:
             # 새 트랜잭션 생성
             tx = Transaction(
-                user_id=user.id,
+                user_id=user.id,  # 사용자 ID 참조
                 user_wallet=wallet_address,
                 tx_hash=tx_data.tx_hash,
                 amount=tx_info["amount"],
@@ -269,6 +269,9 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
             return {"status": tx.status, "message": "Transaction already processed"}
             
     except Exception as e:
+        import traceback
+        print(f"Error in notify_deposit_transaction: {str(e)}")
+        print(traceback.format_exc())
         return {"status": "error", "message": f"Error processing transaction: {str(e)}"}
 
 # 인출 정보 조회
