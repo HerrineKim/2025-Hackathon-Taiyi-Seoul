@@ -203,10 +203,8 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
             user = db.query(User).filter(User.wallet_address == verification["user"]).first()
             
             if not user:
-                # 새 사용자 생성
+                # 새 사용자 생성 (User 모델에 맞게 수정)
                 user = User(
-                    username=f"user_{verification['user'][:8]}",
-                    email=f"user_{verification['user'][:8]}@example.com",
                     wallet_address=verification["user"]
                 )
                 db.add(user)
