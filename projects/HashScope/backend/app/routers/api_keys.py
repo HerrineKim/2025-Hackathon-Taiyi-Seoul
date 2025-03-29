@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Path
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta
 import secrets
 import hashlib
@@ -19,30 +19,30 @@ class APIKeyCreate(BaseModel):
 
 class APIKeyResponse(BaseModel):
     key_id: str
-    name: str = None
+    name: Optional[str] = None
     is_active: bool
     created_at: datetime
-    expires_at: datetime = None
+    expires_at: Optional[datetime] = None
     rate_limit_per_minute: int
     call_count: int
-    last_used_at: datetime = None
+    last_used_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class APIKeyWithSecret(BaseModel):
     key_id: str
     secret_key: str
-    name: str = None
+    name: Optional[str] = None
     is_active: bool
     created_at: datetime
-    expires_at: datetime = None
+    expires_at: Optional[datetime] = None
     rate_limit_per_minute: int
 
 class APIKeyUsage(BaseModel):
     key_id: str
     call_count: int
-    last_used_at: datetime = None
+    last_used_at: Optional[datetime] = None
     rate_limit_per_minute: int
     token_consumption_rate: float
 
