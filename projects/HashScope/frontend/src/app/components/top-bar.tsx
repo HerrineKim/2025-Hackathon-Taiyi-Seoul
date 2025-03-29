@@ -16,16 +16,50 @@ export function TopBar() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedBalance = localStorage.getItem('tokenBalance');
-    if (storedBalance) {
-      setTokenBalance(Number(storedBalance));
-    }
-    // Add a small delay to prevent flash of loading state
-    const timer = setTimeout(() => {
+    if (connected && account) {
+      fetchUserBalance(account);
+    } else {
+      setTokenBalance(null);
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [connected, account]);
+
+  const fetchUserBalance = async (userAddress: string) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/${userAddress}/balance`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch balance");
+      }
+
+      const data = await response.json();
+      
+      if (data.formatted_balance) {
+        // Handle both string and number formats
+        const balance = typeof data.formatted_balance === 'string' 
+          ? parseFloat(data.formatted_balance.replace(/,/g, ''))
+          : data.formatted_balance;
+        
+        setTokenBalance(isNaN(balance) ? 0 : balance);
+      } else {
+        setTokenBalance(0);
+      }
+    } catch (error) {
+      console.error('Balance fetch error:', error);
+      setTokenBalance(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="sticky top-0 z-20 bg-gray-800 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -42,7 +76,11 @@ export function TopBar() {
             <div className="flex items-center space-x-2 bg-gray-700 px-3 py-1.5 rounded-lg">
               <Coins className="w-4 h-4 text-yellow-400" />
               <span className="text-white font-medium">
-                {tokenBalance !== null ? `${tokenBalance.toLocaleString()} HSK` : '0 HSK'}
+                {isLoading ? (
+                  <Skeleton className="h-4 w-16 bg-gray-600" />
+                ) : (
+                  `${tokenBalance?.toLocaleString() || '0'} HSK`
+                )}
               </span>
             </div>
           )}
