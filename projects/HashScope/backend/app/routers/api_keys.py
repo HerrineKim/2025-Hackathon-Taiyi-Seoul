@@ -205,16 +205,16 @@ async def get_api_key_history(
     db: Session = Depends(get_db)
 ):
     """
-    특정 API 키의 호출 히스토리를 조회합니다.
+    Get the usage history for a specific API key.
     
-    - **key_id**: API 키 ID
+    - **key_id**: The ID of the API key
     
-    반환값:
-    - 총 호출 횟수
-    - 총 비용
-    - 엔드포인트별 호출 통계 (엔드포인트, HTTP 메서드, 호출 횟수, 마지막 호출 시간, 총 비용)
+    Returns:
+    - Total number of calls
+    - Total cost
+    - Usage statistics per endpoint (endpoint, HTTP method, call count, last used time, total cost)
     
-    JWT 토큰을 통한 인증이 필요합니다.
+    Requires authentication via JWT token.
     """
     # API 키 존재 여부 확인
     api_key = db.query(APIKey).filter(

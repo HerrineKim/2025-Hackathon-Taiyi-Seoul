@@ -59,16 +59,16 @@ def get_session_with_retries(
     allowed_methods=None
 ):
     """
-    재시도 기능이 있는 요청 세션 생성
+    Create a request session with retry functionality
     
     Args:
-        retries: 재시도 횟수
-        backoff_factor: 재시도 간 지연 시간 계수
-        status_forcelist: 재시도할 HTTP 상태 코드
-        allowed_methods: 재시도할 HTTP 메서드
+        retries: Number of retry attempts
+        backoff_factor: Time delay factor between retries
+        status_forcelist: HTTP status codes to retry
+        allowed_methods: HTTP methods to retry
         
     Returns:
-        requests.Session: 재시도 기능이 있는 세션
+        requests.Session: Session with retry functionality
     """
     if allowed_methods is None:
         allowed_methods = ["HEAD", "GET", "OPTIONS"]
@@ -92,15 +92,15 @@ def get_session_with_retries(
 # 바이낸스 API에서 암호화폐 가격 조회
 def get_binance_price(symbol, max_retries=3, retry_delay=2):
     """
-    바이낸스 API에서 특정 암호화폐 심볼의 최근 거래 가격 조회
+    Get the recent trading price of a specific cryptocurrency symbol from Binance API
     
     Args:
-        symbol (str): 거래 쌍 심볼 (예: 'BTCUSDT', 'ETHUSDT')
-        max_retries (int): 최대 재시도 횟수
-        retry_delay (int): 재시도 간 지연 시간(초)
+        symbol (str): Trading pair symbol (e.g., 'BTCUSDT', 'ETHUSDT')
+        max_retries (int): Maximum number of retry attempts
+        retry_delay (int): Delay between retries in seconds
         
     Returns:
-        float: 암호화폐의 최신 가격
+        float: Latest price of the cryptocurrency
     """
     endpoint = "https://api.binance.com/api/v3/trades"
     
@@ -152,14 +152,14 @@ def get_binance_price(symbol, max_retries=3, retry_delay=2):
 # 업비트 API에서 BTC 가격 조회
 def get_upbit_btc_price(max_retries=3, retry_delay=2):
     """
-    업비트 API에서 BTC 가격 조회
+    Get BTC price from Upbit API
     
     Args:
-        max_retries (int): 최대 재시도 횟수
-        retry_delay (int): 재시도 간 지연 시간(초)
+        max_retries (int): Maximum number of retry attempts
+        retry_delay (int): Delay between retries in seconds
         
     Returns:
-        float: KRW 단위의 BTC 가격
+        float: BTC price in KRW
     """
     endpoint = "https://api.upbit.com/v1/ticker"
     params = {'markets': 'KRW-BTC'}
@@ -207,14 +207,14 @@ def get_upbit_btc_price(max_retries=3, retry_delay=2):
 # 업비트 API에서 USDT 가격 조회
 def get_upbit_usdt_price(max_retries=3, retry_delay=2):
     """
-    업비트 API에서 USDT 가격 조회
+    Get USDT price from Upbit API
     
     Args:
-        max_retries (int): 최대 재시도 횟수
-        retry_delay (int): 재시도 간 지연 시간(초)
+        max_retries (int): Maximum number of retry attempts
+        retry_delay (int): Delay between retries in seconds
         
     Returns:
-        float: KRW 단위의 USDT 가격
+        float: USDT price in KRW
     """
     endpoint = "https://api.upbit.com/v1/ticker"
     params = {'markets': 'KRW-USDT'}
@@ -262,14 +262,14 @@ def get_upbit_usdt_price(max_retries=3, retry_delay=2):
 # 네이버 파이낸스에서 USD/KRW 환율 조회
 def get_usd_krw_rate_naver(max_retries=3, retry_delay=2):
     """
-    네이버 파이낸스에서 USD/KRW 환율 조회
+    Get USD/KRW exchange rate from Naver Finance
     
     Args:
-        max_retries (int): 최대 재시도 횟수
-        retry_delay (int): 재시도 간 지연 시간(초)
+        max_retries (int): Maximum number of retry attempts
+        retry_delay (int): Delay between retries in seconds
         
     Returns:
-        float: USD/KRW 환율
+        float: USD/KRW exchange rate
     """
     for attempt in range(max_retries + 1):
         try:
@@ -320,14 +320,14 @@ def get_usd_krw_rate_naver(max_retries=3, retry_delay=2):
 # Yahoo Finance에서 USD/KRW 환율 조회
 def get_usd_krw_rate_yahoo(max_retries=3, retry_delay=2):
     """
-    Yahoo Finance에서 USD/KRW 환율 조회
+    Get USD/KRW exchange rate from Yahoo Finance
     
     Args:
-        max_retries (int): 최대 재시도 횟수
-        retry_delay (int): 재시도 간 지연 시간(초)
+        max_retries (int): Maximum number of retry attempts
+        retry_delay (int): Delay between retries in seconds
         
     Returns:
-        float: USD/KRW 환율
+        float: USD/KRW exchange rate
     """
     for attempt in range(max_retries + 1):
         try:
@@ -352,15 +352,15 @@ def get_usd_krw_rate_yahoo(max_retries=3, retry_delay=2):
 # USD/KRW 환율 조회 (네이버 및 Yahoo 폴백 메커니즘)
 def get_usd_krw_rate(max_retries=3, retry_delay=2):
     """
-    USD/KRW 환율 조회 (폴백 메커니즘 사용)
-    먼저 네이버 파이낸스를 시도하고, 실패하면 Yahoo Finance로 폴백
+    Get USD/KRW exchange rate (using fallback mechanism)
+    First tries Naver Finance, then falls back to Yahoo Finance if that fails
     
     Args:
-        max_retries (int): 최대 재시도 횟수
-        retry_delay (int): 재시도 간 지연 시간(초)
+        max_retries (int): Maximum number of retry attempts
+        retry_delay (int): Delay between retries in seconds
         
     Returns:
-        float: USD/KRW 환율
+        float: USD/KRW exchange rate
     """
     # 먼저 네이버 파이낸스 시도
     rate = get_usd_krw_rate_naver(max_retries, retry_delay)
@@ -374,17 +374,17 @@ def get_usd_krw_rate(max_retries=3, retry_delay=2):
 # 김치 프리미엄 계산
 def calculate_premium(binance_price, upbit_price_krw, exchange_rate):
     """
-    업비트 가격과 바이낸스 가격 간의 프리미엄 백분율 계산
-    다음 공식 사용:
+    Calculate the premium percentage between Upbit and Binance prices
+    Uses the following formula:
     (UPBIT:BTCKRW - BINANCE:BTCUSDT * FX_IDC:USDKRW) / (BINANCE:BTCUSDT * FX_IDC:USDKRW) * 100
     
     Args:
-        binance_price (float): 바이낸스의 USD 단위 BTC 가격 (BINANCE:BTCUSDT)
-        upbit_price_krw (float): 업비트의 KRW 단위 BTC 가격 (UPBIT:BTCKRW)
-        exchange_rate (float): USD/KRW 환율 (FX_IDC:USDKRW)
+        binance_price (float): BTC price in USD from Binance (BINANCE:BTCUSDT)
+        upbit_price_krw (float): BTC price in KRW from Upbit (UPBIT:BTCKRW)
+        exchange_rate (float): USD/KRW exchange rate (FX_IDC:USDKRW)
         
     Returns:
-        float: 프리미엄 백분율
+        float: Premium percentage
     """
     if not binance_price or not upbit_price_krw or not exchange_rate:
         return None
@@ -398,20 +398,20 @@ def calculate_premium(binance_price, upbit_price_krw, exchange_rate):
     return premium_percentage
 
 # API 엔드포인트: BTC 달러 가격
-@router.get("/btc/usd", response_model=CryptoPrice, summary="BTC 달러 가격 조회")
+@router.get("/btc/usd", response_model=CryptoPrice, summary="Get BTC price in USD")
 async def get_btc_usd_price(request: Request, api_key: APIKey = Depends(get_api_key_with_tracking)):
     """
-    바이낸스 API에서 BTC 달러 가격 조회
+    Get BTC price in USD from Binance API
     
     Returns:
-        CryptoPrice: BTC 달러 가격 정보
+        CryptoPrice: BTC price information in USD
     """
     price = get_binance_price('BTCUSDT')
     
     if price is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="바이낸스 API에서 BTC 가격을 조회할 수 없습니다"
+            detail="Failed to retrieve BTC price from Binance API"
         )
     
     return CryptoPrice(
@@ -421,20 +421,20 @@ async def get_btc_usd_price(request: Request, api_key: APIKey = Depends(get_api_
     )
 
 # API 엔드포인트: BTC 원화 가격
-@router.get("/btc/krw", response_model=CryptoPrice, summary="BTC 원화 가격 조회")
+@router.get("/btc/krw", response_model=CryptoPrice, summary="Get BTC price in KRW")
 async def get_btc_krw_price(request: Request, api_key: APIKey = Depends(get_api_key_with_tracking)):
     """
-    업비트 API에서 BTC 원화 가격 조회
+    Get BTC price in KRW from Upbit API
     
     Returns:
-        CryptoPrice: BTC 원화 가격 정보
+        CryptoPrice: BTC price information in KRW
     """
     price = get_upbit_btc_price()
     
     if price is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="업비트 API에서 BTC 가격을 조회할 수 없습니다"
+            detail="Failed to retrieve BTC price from Upbit API"
         )
     
     return CryptoPrice(
@@ -444,20 +444,20 @@ async def get_btc_krw_price(request: Request, api_key: APIKey = Depends(get_api_
     )
 
 # API 엔드포인트: USDT 원화 가격
-@router.get("/usdt/krw", response_model=CryptoPrice, summary="USDT 원화 가격 조회")
+@router.get("/usdt/krw", response_model=CryptoPrice, summary="Get USDT price in KRW")
 async def get_usdt_krw_price(request: Request, api_key: APIKey = Depends(get_api_key_with_tracking)):
     """
-    업비트 API에서 USDT 원화 가격 조회
+    Get USDT price in KRW from Upbit API
     
     Returns:
-        CryptoPrice: USDT 원화 가격 정보
+        CryptoPrice: USDT price information in KRW
     """
     price = get_upbit_usdt_price()
     
     if price is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="업비트 API에서 USDT 가격을 조회할 수 없습니다"
+            detail="Failed to retrieve USDT price from Upbit API"
         )
     
     return CryptoPrice(
@@ -467,13 +467,13 @@ async def get_usdt_krw_price(request: Request, api_key: APIKey = Depends(get_api
     )
 
 # API 엔드포인트: 김치 프리미엄 비율
-@router.get("/kimchi-premium", response_model=KimchiPremium, summary="김치 프리미엄 비율 조회")
+@router.get("/kimchi-premium", response_model=KimchiPremium, summary="Get kimchi premium percentage")
 async def get_kimchi_premium(request: Request, api_key: APIKey = Depends(get_api_key_with_tracking)):
     """
-    바이낸스와 업비트 간의 BTC 가격 차이에 기반한 김치 프리미엄 비율 조회
+    Get kimchi premium percentage between Upbit and Binance prices
     
     Returns:
-        KimchiPremium: 김치 프리미엄 정보
+        KimchiPremium: Kimchi premium information
     """
     # ThreadPoolExecutor를 사용하여 모든 가격을 병렬로 조회
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -491,7 +491,7 @@ async def get_kimchi_premium(request: Request, api_key: APIKey = Depends(get_api
     if None in [binance_btc_price, upbit_btc_price, usd_krw_rate]:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="필요한 가격 정보를 모두 조회할 수 없습니다"
+            detail="Failed to retrieve necessary price information"
         )
     
     # 프리미엄 계산
@@ -500,7 +500,7 @@ async def get_kimchi_premium(request: Request, api_key: APIKey = Depends(get_api
     if premium is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="김치 프리미엄을 계산할 수 없습니다"
+            detail="Failed to calculate kimchi premium"
         )
     
     return KimchiPremium(
@@ -512,13 +512,13 @@ async def get_kimchi_premium(request: Request, api_key: APIKey = Depends(get_api
     )
 
 # API 엔드포인트: 주요 암호화폐 가격 목록
-@router.get("/prices", response_model=CryptoPriceList, summary="주요 암호화폐 가격 목록 조회")
+@router.get("/prices", response_model=CryptoPriceList, summary="Get major cryptocurrency prices")
 async def get_crypto_prices(request: Request, api_key: APIKey = Depends(get_api_key_with_tracking)):
     """
-    바이낸스 API에서 주요 암호화폐(BTC, ETH, XRP) 가격 목록 조회
+    Get major cryptocurrency prices (BTC, ETH, XRP) from Binance API
     
     Returns:
-        CryptoPriceList: 주요 암호화폐 가격 목록
+        CryptoPriceList: Major cryptocurrency price list
     """
     # ThreadPoolExecutor를 사용하여 모든 가격을 병렬로 조회
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -545,7 +545,7 @@ async def get_crypto_prices(request: Request, api_key: APIKey = Depends(get_api_
     if not prices:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="암호화폐 가격을 조회할 수 없습니다"
+            detail="Failed to retrieve cryptocurrency prices"
         )
     
     return CryptoPriceList(

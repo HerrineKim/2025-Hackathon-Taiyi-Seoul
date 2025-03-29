@@ -139,17 +139,17 @@ def set_app_instance(app):
     _app_instance = app
 
 # API 목록 조회 엔드포인트
-@router.get("/list", response_model=APICatalogResponse, summary="API 목록 조회")
+@router.get("/list", response_model=APICatalogResponse, summary="List available APIs")
 async def get_api_list(
     request: Request,
-    category: Optional[str] = Query(None, description="필터링할 API 카테고리")
+    category: Optional[str] = Query(None, description="API category to filter")
 ):
     """
-    제공 가능한 API 목록을 조회합니다.
+    Get a list of available APIs.
     
-    - **category**: 선택적으로 특정 카테고리의 API만 필터링할 수 있습니다.
+    - **category**: Optionally filter APIs by specific category.
     
-    카테고리가 지정되지 않거나 유효하지 않은 경우 모든 API 목록을 반환합니다.
+    Returns all APIs if no category is specified or if the category is invalid.
     """
     global _app_instance
     
@@ -181,11 +181,11 @@ async def get_api_list(
     )
 
 # 카테고리 목록 조회 엔드포인트
-@router.get("/categories", summary="API 카테고리 목록 조회")
+@router.get("/categories", summary="List API categories")
 async def get_categories(
     request: Request
 ):
     """
-    사용 가능한 API 카테고리 목록을 조회합니다.
+    Get a list of available API categories.
     """
     return API_CATEGORIES
