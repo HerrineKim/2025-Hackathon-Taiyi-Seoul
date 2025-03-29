@@ -53,7 +53,7 @@ export default function SecretPage() {
       setIsLoading(true);
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api-keys/`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
       if (!response.ok) throw new Error('Failed to fetch API keys');
@@ -75,7 +75,7 @@ export default function SecretPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify(formData)
       });
