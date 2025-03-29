@@ -28,13 +28,6 @@ interface ValidationError {
   }>;
 }
 
-interface ApiKey {
-  id: string;
-  name: string;
-  created_at: string;
-  last_used: string | null;
-}
-
 declare global {
   interface Window {
     web3: Web3;
@@ -55,8 +48,6 @@ export default function MetaMaskAuth() {
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMetaMaskConnected, setIsMetaMaskConnected] = useState(false);
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [isLoadingApiKeys, setIsLoadingApiKeys] = useState(false);
 
   // Function to check MetaMask connection
   const checkMetaMaskConnection = async () => {
@@ -236,44 +227,6 @@ export default function MetaMaskAuth() {
     }
   };
 
-  // TODO: Remove this after testing
-  const fetchApiKeys = async () => {
-    try {
-      setIsLoadingApiKeys(true);
-      setError(null);
-      
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api-keys`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: "test",
-          rate_limit_per_minute: 60
-        })
-      });
-
-      if (!response.ok) {
-        const errorData: ValidationError = await response.json();
-        throw new Error(errorData.detail[0]?.msg || 'Failed to fetch API keys');
-      }
-
-      const data = await response.json();
-      setApiKeys(data);
-    } catch (err) {
-      console.error('Error fetching API keys:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch API keys');
-    } finally {
-      setIsLoadingApiKeys(false);
-    }
-  };
-
   return (
     <div className="w-full">
       {error && (
@@ -313,20 +266,6 @@ export default function MetaMaskAuth() {
           <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
           {loading ? 'Logging in...' : isLoggedIn ? 'Already Logged In' : 'Login with Wallet'}
         </button>
-        {apiKeys.length > 0 && (
-          <div className="mt-4 p-4 bg-purple-900/50 rounded-lg">
-            <h3 className="text-purple-200 font-medium mb-2">API Keys</h3>
-            <div className="space-y-2">
-              {apiKeys.map((key) => (
-                <div key={key.id} className="text-sm text-purple-300">
-                  <p>Name: {key.name}</p>
-                  <p>Created: {new Date(key.created_at).toLocaleString()}</p>
-                  <p>Last Used: {key.last_used ? new Date(key.last_used).toLocaleString() : 'Never'}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {isMetaMaskConnected && (
           <button
