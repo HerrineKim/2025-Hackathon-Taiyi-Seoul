@@ -237,14 +237,17 @@ export default function MetaMaskAuth() {
 
       {isMetaMaskConnected && account && (
         <div className="mb-6 p-4 bg-green-900/50 rounded-lg">
-          <h3 className="text-green-200 font-medium">Connected Account</h3>
+          <div className="flex items-center space-x-2">
+            <div className="relative">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <div className="absolute inset-0 w-2 h-2 bg-green-500 rounded-full animate-ping opacity-75"></div>
+            </div>
+            <h3 className="text-green-200 font-medium">Connected Account</h3>
+          </div>
           <p className="text-sm text-green-300 mt-1">{account}</p>
           {tokenBalance !== null && (
             <p className="text-sm text-green-300 mt-1">HSK Balance: {tokenBalance}</p>
           )}
-          <div className="w-full bg-green-900/50 rounded-full h-2.5 mt-2">
-            <div className="bg-green-500 h-2.5 rounded-full animate-pulse"></div>
-          </div>
         </div>
       )}
 
