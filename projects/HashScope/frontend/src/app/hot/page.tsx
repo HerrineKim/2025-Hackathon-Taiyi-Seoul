@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowUpRight, TrendingUp, Users, LineChart, Flame } from 'lucide-react';
+import { Pagination } from "@/components/ui/pagination";
 
 interface HotAPI {
   id: string;
@@ -95,9 +96,12 @@ const trendingSearches = [
   "HSK Price Feed"
 ];
 
+const ITEMS_PER_PAGE = 6;
+
 export default function HotPage() {
   const [selectedCategory, setSelectedCategory] = React.useState<string>("all");
   const [currentSuggestion, setCurrentSuggestion] = React.useState(0);
+  const [currentPage, setCurrentPage] = React.useState(1);
 
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -109,6 +113,17 @@ export default function HotPage() {
   const filteredAPIs = selectedCategory === "all" 
     ? hotAPIs 
     : hotAPIs.filter(api => api.category === selectedCategory);
+
+  const totalPages = Math.ceil(filteredAPIs.length / ITEMS_PER_PAGE);
+  const paginatedAPIs = filteredAPIs.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to first page when category changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
 
   return (
     <div className="min-h-screen bg-gray-800 p-6">
@@ -151,7 +166,7 @@ export default function HotPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredAPIs.map((api) => (
+          {paginatedAPIs.map((api) => (
             <div
               key={api.id}
               className="bg-gray-700 rounded-lg p-6 hover:bg-gray-600 transition-colors"
@@ -187,6 +202,15 @@ export default function HotPage() {
             </div>
           ))}
         </div>
+
+        {/* Pagination */}
+        {filteredAPIs.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
     </div>
   );
