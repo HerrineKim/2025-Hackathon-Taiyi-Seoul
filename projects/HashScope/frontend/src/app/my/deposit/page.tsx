@@ -144,7 +144,7 @@ export default function DepositPage() {
       // Switch to HSK network (chain ID needs to be updated for HSK network)
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x1' }], // Update with actual HSK network chain ID
+        params: [{ chainId: '0xb1' }], // Update with actual HSK network chain ID
       })
 
       // Connect wallet
