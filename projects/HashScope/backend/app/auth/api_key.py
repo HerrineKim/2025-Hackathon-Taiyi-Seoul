@@ -110,7 +110,7 @@ def get_api_key_with_tracking(
         method = request.method
         
         # 콜당 비용 설정 (0.001 HSK = 10^15 wei)
-        cost_per_call = 10**15  # 0.001 HSK in wei
+        cost_per_call = 10**14  # 0.001 HSK in wei
         
         # API 사용량 기록
         usage = APIUsage(
