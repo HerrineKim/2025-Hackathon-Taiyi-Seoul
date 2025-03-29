@@ -10,76 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUpRight, Search, LineChart, Users, Database, Coins } from 'lucide-react';
+import { ArrowUpRight, Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
-
-interface API {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  usage: number;
-  price: number;
-  icon: React.ReactNode;
-}
-
-const allAPIs: API[] = [
-  {
-    id: "1",
-    name: "BTC Price Feed",
-    description: "Real-time Bitcoin price data with historical trends",
-    category: "Market Data",
-    usage: 150000,
-    price: 0.1,
-    icon: <LineChart className="w-5 h-5" />,
-  },
-  {
-    id: "2",
-    name: "Social Sentiment Analysis",
-    description: "AI-powered sentiment analysis for crypto-related social media",
-    category: "Social Signals",
-    usage: 85000,
-    price: 0.2,
-    icon: <Users className="w-5 h-5" />,
-  },
-  {
-    id: "3",
-    name: "HSK Network Analytics",
-    description: "Comprehensive network statistics and transaction analysis",
-    category: "On-chain Analytics",
-    usage: 120000,
-    price: 0.15,
-    icon: <Database className="w-5 h-5" />,
-  },
-  {
-    id: "4",
-    name: "Exchange Flow Analysis",
-    description: "Real-time exchange inflow/outflow tracking",
-    category: "Market Data",
-    usage: 95000,
-    price: 0.12,
-    icon: <Coins className="w-5 h-5" />,
-  },
-  {
-    id: "5",
-    name: "Market Depth API",
-    description: "Order book depth analysis across major exchanges",
-    category: "Market Data",
-    usage: 75000,
-    price: 0.18,
-    icon: <LineChart className="w-5 h-5" />,
-  },
-  {
-    id: "6",
-    name: "Social Media Impact",
-    description: "Track social media influence on crypto prices",
-    category: "Social Signals",
-    usage: 65000,
-    price: 0.25,
-    icon: <Users className="w-5 h-5" />,
-  },
-];
+import { allAPIs } from "@/lib/mock-data";
 
 const ITEMS_PER_PAGE = 6;
 

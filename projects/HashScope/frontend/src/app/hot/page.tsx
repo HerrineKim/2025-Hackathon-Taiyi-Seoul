@@ -10,91 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUpRight, TrendingUp, Users, LineChart, Flame } from 'lucide-react';
+import { ArrowUpRight, Flame } from 'lucide-react';
 import { Pagination } from "@/components/ui/pagination";
-
-interface HotAPI {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  usage: number;
-  price: number;
-  icon: React.ReactNode;
-  trend: number; // Percentage increase in usage
-}
-
-const hotAPIs: HotAPI[] = [
-  {
-    id: "1",
-    name: "BTC Price Feed",
-    description: "Real-time Bitcoin price data from major exchanges",
-    category: "Market Data",
-    usage: 15000,
-    price: 0.1,
-    icon: <TrendingUp className="w-5 h-5" />,
-    trend: 45
-  },
-  {
-    id: "2",
-    name: "HSK Price Feed",
-    description: "Live HSK token price and market data",
-    category: "Market Data",
-    usage: 12000,
-    price: 0.1,
-    icon: <TrendingUp className="w-5 h-5" />,
-    trend: 32
-  },
-  {
-    id: "3",
-    name: "Trump Social Sentiment",
-    description: "Real-time sentiment analysis of Trump's social media posts",
-    category: "Social Signals",
-    usage: 8000,
-    price: 0.5,
-    icon: <Users className="w-5 h-5" />,
-    trend: 78
-  },
-  {
-    id: "4",
-    name: "Elon Musk Impact",
-    description: "Market impact analysis of Elon Musk's tweets",
-    category: "Social Signals",
-    usage: 7500,
-    price: 0.5,
-    icon: <Users className="w-5 h-5" />,
-    trend: 65
-  },
-  {
-    id: "5",
-    name: "HSK Network Activity",
-    description: "Real-time network activity and transaction volume",
-    category: "On-chain Analytics",
-    usage: 10000,
-    price: 0.2,
-    icon: <LineChart className="w-5 h-5" />,
-    trend: 28
-  },
-  {
-    id: "6",
-    name: "Exchange Flow Analysis",
-    description: "HSK token flow analysis between exchanges",
-    category: "On-chain Analytics",
-    usage: 9000,
-    price: 0.2,
-    icon: <LineChart className="w-5 h-5" />,
-    trend: 42
-  }
-];
-
-const trendingSearches = [
-  "BTC Price Feed",
-  "Trump Social Sentiment",
-  "HSK Network Activity",
-  "Elon Musk Impact",
-  "Exchange Flow Analysis",
-  "HSK Price Feed"
-];
+import { hotAPIs, trendingSearches } from "@/lib/mock-data";
 
 const ITEMS_PER_PAGE = 6;
 
