@@ -219,7 +219,7 @@ async def get_api_key_history(
     # API 키 존재 여부 확인
     api_key = db.query(APIKey).filter(
         APIKey.key_id == key_id,
-        APIKey.user_id == current_user.id
+        APIKey.user_wallet == current_user.wallet_address
     ).first()
     
     if not api_key:
