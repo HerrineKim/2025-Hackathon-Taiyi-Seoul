@@ -4,10 +4,15 @@ from datetime import datetime
 from typing import Optional
 import hashlib
 import uuid
+import os
+from dotenv import load_dotenv
 
 from app.database import get_db
 from app.models import APIKey, APIUsage, User, Transaction
 from app.blockchain.contracts import deduct_for_usage
+
+# .env 파일 로드
+load_dotenv()
 
 def verify_api_key(
     api_key_id: str = Header(..., alias="api-key-id"),
@@ -143,8 +148,8 @@ def get_api_key_with_tracking(
                 total_cost = sum(usage.cost for usage in unbilled_usages)
                 
                 try:
-                    # 관리자 주소 (수수료 수취 주소) - 실제 관리자 지갑 주소로 변경
-                    admin_address = "0xDbCeE5A0F6804f36930EAA33aB4cef11a7964398"  # 관리자 지갑 주소
+                    # 관리자 주소 (수수료 수취 주소) - .env 파일에서 가져오거나 기본값 사용
+                    admin_address = os.getenv("FEE_RECIPIENT_ADDRESS", "0xf91aAB71fC16dA79c8ACFAD67aF7C9b39588B246")  # 수수료 수취 지갑 주소
                     
                     # 로그 기록 - 정확한 HSK 값 표시
                     print(f"Deducting {total_cost / 10**18:.6f} HSK from {user.wallet_address}")
