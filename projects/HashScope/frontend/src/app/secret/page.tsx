@@ -37,6 +37,7 @@ export default function SecretPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showKeyId, setShowKeyId] = useState<{ [key: string]: boolean }>({});
   const [formData, setFormData] = useState({
     name: '',
     rate_limit_per_minute: 60
@@ -235,11 +236,31 @@ export default function SecretPage() {
               <div className="space-y-4">
                 {apiKeys.map((key) => (
                   <Card key={key.key_id} className="bg-gray-800 border-gray-700">
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-8 pb-6">
                       <div className="flex justify-between items-start">
-                        <div>
+                        <div className="space-y-2">
                           <h3 className="font-semibold text-white">{key.name || 'Unnamed Key'}</h3>
-                          <p className="text-sm text-gray-400">ID: {key.key_id}</p>
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm text-gray-400">
+                              ID: {showKeyId[key.key_id] ? key.key_id : '••••••••••••••••'}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowKeyId(prev => ({ ...prev, [key.key_id]: !prev[key.key_id] }))}
+                              className="h-6 px-2 text-xs text-gray-400 hover:text-gray-300"
+                            >
+                              {showKeyId[key.key_id] ? 'Hide' : 'Show'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(key.key_id)}
+                              className="h-6 px-2 text-xs text-gray-400 hover:text-gray-300"
+                            >
+                              {copied ? 'Copied!' : 'Copy'}
+                            </Button>
+                          </div>
                           <p className="text-sm text-gray-400">
                             Created: {new Date(key.created_at).toLocaleDateString()}
                           </p>
