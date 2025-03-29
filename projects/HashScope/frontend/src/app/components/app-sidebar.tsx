@@ -1,4 +1,4 @@
-import { Home, Flame, Search, Info, Activity, User, Key } from "lucide-react"
+import { Home, Flame, Search, Info, Activity, User, Key, Wallet } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -41,14 +41,19 @@ const myItems = [
     icon: Activity,
   },
   {
-    title: "Profile",
-    url: "/my/profile",
-    icon: User,
+    title: "Deposit",
+    url: "/my/deposit",
+    icon: Wallet,
   },
   {
     title: "Secret",
     url: "/secret",
     icon: Key,
+  },
+  {
+    title: "Profile",
+    url: "/my/profile",
+    icon: User,
   },
 ]
 

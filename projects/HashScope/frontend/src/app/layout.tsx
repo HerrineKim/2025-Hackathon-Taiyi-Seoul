@@ -5,6 +5,7 @@ import MetaMaskProviderWrapper from "@/components/providers/MetaMaskProviderWrap
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/app/components/app-sidebar"
 import { TopBar } from "@/app/components/top-bar"
+import { Toaster } from "@/components/ui/sonner"
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -33,6 +34,7 @@ export default function RootLayout({
                 {children}
               </div>
             </main>
+            <Toaster />
           </SidebarProvider>
         </MetaMaskProviderWrapper>
       </body>
