@@ -140,7 +140,7 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-app.include_router(users.router, tags=["Users"])
+app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(api_keys.router, prefix="/api-keys", tags=["API Keys"])
 
 # 커스텀 OpenAPI 스키마 정의
