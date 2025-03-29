@@ -5,7 +5,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.openapi.docs import get_swagger_ui_html
 import os
 
-from app.routers import users, auth, api_keys, crypto
+from app.routers import users, auth, api_keys, crypto, api_catalog
 from app.database import engine, Base, init_db, get_db
 from app.auth.dependencies import get_current_user
 
@@ -143,6 +143,10 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(api_keys.router, prefix="/api-keys", tags=["API Keys"])
 app.include_router(crypto.router, prefix="/crypto", tags=["Cryptocurrency Data"])
+app.include_router(api_catalog.router, prefix="/api-catalog", tags=["API Catalog"])
+
+# API 카탈로그에 앱 인스턴스 설정
+api_catalog.set_app_instance(app)
 
 # 커스텀 OpenAPI 스키마 정의
 def custom_openapi():
