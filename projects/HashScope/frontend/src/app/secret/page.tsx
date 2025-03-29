@@ -100,6 +100,7 @@ export default function SecretPage() {
       toast.success('Copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
       toast.error('Failed to copy to clipboard');
     }
   };
