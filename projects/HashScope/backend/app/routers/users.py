@@ -217,11 +217,11 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
         # 트랜잭션 검증
         tx_info = verify_deposit_transaction(tx_data.tx_hash)
         
-        if not tx_info:
-            return {"status": "pending", "message": "Transaction not found or still pending"}
+        if not tx_info or not tx_info.get("success", False):
+            return {"status": "pending", "message": tx_info.get("message", "Transaction not found or still pending")}
         
         # 지갑 주소 정규화
-        wallet_address = normalize_address(tx_info["from"])
+        wallet_address = normalize_address(tx_info["user"])
         
         # 사용자 조회
         user = db.query(User).filter(User.wallet_address == wallet_address).first()
@@ -245,19 +245,24 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
         if not tx:
             # 새 트랜잭션 생성
             tx = Transaction(
+                user_id=user.id,
                 user_wallet=wallet_address,
                 tx_hash=tx_data.tx_hash,
-                amount=tx_info["value"],
+                amount=tx_info["amount"],
                 tx_type="deposit",
                 status="confirmed",
                 created_at=datetime.utcnow()
             )
             db.add(tx)
+            
+            # 사용자 잔액 업데이트 (블록체인에서 최신 잔액 조회)
+            blockchain_balance = get_balance(wallet_address)
+            user.balance = blockchain_balance
             db.commit()
             
             return {
                 "status": "confirmed", 
-                "message": f"Deposit confirmed: {format_wei_to_hsk(tx_info['value'])} HSK"
+                "message": f"Deposit confirmed: {format_wei_to_hsk(tx_info['amount'])} HSK"
             }
         else:
             # 이미 처리된 트랜잭션
