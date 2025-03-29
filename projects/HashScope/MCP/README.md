@@ -2,6 +2,11 @@
 
 HashScope MCP는 AI Agent가 HashScope API를 통해 암호화폐 데이터에 쉽게 접근할 수 있도록 하는 LangChain Tool 통합 라이브러리입니다.
 
+## 배포 링크
+
+- **API 엔드포인트**: [https://hashkey.sungwoonsong.com/api](https://hashkey.sungwoonsong.com/api)
+- **API 문서**: [https://hashkey.sungwoonsong.com/docs](https://hashkey.sungwoonsong.com/docs)
+
 ## 설치 방법
 
 ```bash
