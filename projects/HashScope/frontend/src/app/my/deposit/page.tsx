@@ -44,7 +44,6 @@ const HSKDepositABI = [
 
 // HSK network settings
 const HSK_RPC_URL = process.env.NEXT_PUBLIC_HSK_RPC_URL || 'https://mainnet.hsk.xyz'
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_HSK_DEPOSIT_CONTRACT || '0x1234567890123456789012345678901234567890'
 
 export default function DepositPage() {
   const [depositInfo, setDepositInfo] = useState<DepositInfo | null>(null)
@@ -91,9 +90,11 @@ export default function DepositPage() {
   }
 
   const fetchUserBalance = async (userAddress: string) => {
+    if (!depositInfo?.deposit_address) return
+
     try {
       const provider = new ethers.providers.JsonRpcProvider(HSK_RPC_URL)
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, HSKDepositABI, provider)
+      const contract = new ethers.Contract(depositInfo.deposit_address, HSKDepositABI, provider)
       
       const balance = await contract.getBalance(userAddress)
       setUserBalance(ethers.utils.formatEther(balance))
@@ -121,6 +122,11 @@ export default function DepositPage() {
       }
       const data = await response.json()
       setDepositInfo(data)
+      
+      // Fetch balance after getting deposit info
+      if (account) {
+        await fetchUserBalance(account)
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to fetch deposit information")
     }
@@ -144,7 +150,7 @@ export default function DepositPage() {
       // Connect wallet
       const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, HSKDepositABI, signer)
+      const contract = new ethers.Contract(depositInfo.deposit_address, HSKDepositABI, signer)
 
       // Convert amount to wei
       const amountWei = ethers.utils.parseEther(depositInfo.amount.toString())
