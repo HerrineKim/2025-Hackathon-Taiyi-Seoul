@@ -1,27 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Key, LineChart, Database, Coins } from 'lucide-react';
+import { ArrowRight, Key, LineChart, Coins, Database } from 'lucide-react';
 import { useSDK } from '@metamask/sdk-react';
-
+import Image from 'next/image';
 export default function Home() {
   const { connected } = useSDK();
 
   return (
     <div className="min-h-screen bg-gray-800">
-      <main className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full py-12">
+      <main className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         {/* Hero Section */}
         <div className="text-center mb-8">
-          <img 
+          <Image
             src="/logo-500.png" 
             alt="HashScope Logo" 
             className="w-32 h-32 mx-auto mb-6"
+            width={128}
+            height={128}
           />
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6">
             HashScope
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-            AI-powered crypto market prediction and automated trading platform on HSK Chain
+            An HSK Chain-based tokenized API platform providing real-time crypto data for Al agents.
           </p>
           <Link
             href={connected ? "/hot" : "/my/deposit"}
@@ -55,21 +57,41 @@ export default function Home() {
 
           <div className="bg-gray-700 p-6 rounded-lg">
             <div className="flex items-center mb-4">
-              <Database className="w-8 h-8 text-blue-500 mr-3" />
-              <h3 className="text-xl font-semibold text-white">Data Marketplace</h3>
-            </div>
-            <p className="text-gray-300">
-              Register your data sources and earn HSK rewards when your data is used
-            </p>
-          </div>
-
-          <div className="bg-gray-700 p-6 rounded-lg">
-            <div className="flex items-center mb-4">
               <Coins className="w-8 h-8 text-blue-500 mr-3" />
               <h3 className="text-xl font-semibold text-white">Pay-as-you-go</h3>
             </div>
             <p className="text-gray-300">
               Pay only for what you use with our usage-based billing model
+            </p>
+          </div>
+
+          <div className="bg-gray-700 p-6 rounded-lg">
+            <div className="flex items-center mb-4">
+              <LineChart className="w-8 h-8 text-blue-500 mr-3" />
+              <h3 className="text-xl font-semibold text-white">API Analytics</h3>
+            </div>
+            <p className="text-gray-300">
+              Track your API usage, performance metrics, and cost analysis in real-time
+            </p>
+          </div>
+
+          <div className="bg-gray-700 p-6 rounded-lg">
+            <div className="flex items-center mb-4">
+              <Key className="w-8 h-8 text-blue-500 mr-3" />
+              <h3 className="text-xl font-semibold text-white">API Management</h3>
+            </div>
+            <p className="text-gray-300">
+              Create and manage API keys with customizable rate limits
+            </p>
+          </div>
+
+          <div className="bg-gray-700 p-6 rounded-lg">
+            <div className="flex items-center mb-4">
+              <Database className="w-8 h-8 text-blue-500 mr-3" />
+              <h3 className="text-xl font-semibold text-white">Rich API Collection</h3>
+            </div>
+            <p className="text-gray-300">
+              Access diverse APIs for market data, social signals, and on-chain analytics
             </p>
           </div>
         </div>
