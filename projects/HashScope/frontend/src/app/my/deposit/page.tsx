@@ -221,49 +221,50 @@ export default function DepositPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Deposit</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Deposit Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {depositInfo ? (
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Connected Wallet</p>
-                <p className="font-mono break-all">{account || "Not connected"}</p>
+    <div className="min-h-screen bg-gray-800">
+      <div className="container mx-auto p-6">
+        <h1 className="text-4xl font-bold text-white mb-6">Deposit</h1>
+        <Card className="bg-gray-700 border-gray-600">
+          <CardHeader>
+            <CardTitle className="text-white">Deposit Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {depositInfo ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-gray-300">Connected Wallet</p>
+                  <p className="font-mono break-all text-white">{account || "Not connected"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-300">Current Balance</p>
+                  <p className="text-white">{userBalance}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="depositAmount" className="text-gray-300">Deposit Amount (HSK)</Label>
+                  <Input
+                    id="depositAmount"
+                    type="number"
+                    min="0.001"
+                    step="0.001"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className="bg-gray-800 border-gray-600 text-white"
+                  />
+                </div>
+                <Button
+                  onClick={handleDeposit}
+                  disabled={isLoading || !account}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isLoading ? "Processing..." : "Deposit"}
+                </Button>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Current Balance</p>
-                <p>{userBalance}</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="depositAmount" className="text-gray-500">Deposit Amount (HSK)</Label>
-                <Input
-                  id="depositAmount"
-                  type="number"
-                  min="0.001"
-                  step="0.001"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  className="bg-gray-800 border-gray-700 text-white"
-                />
-                <p className="text-xs text-gray-500">Minimum deposit amount: 0.001 HSK</p>
-              </div>
-              <Button
-                onClick={handleDeposit}
-                disabled={isLoading || !account}
-                className="w-full"
-              >
-                {isLoading ? "Processing..." : "Deposit with HashKey"}
-              </Button>
-            </div>
-          ) : (
-            <p>Loading deposit information...</p>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <p className="text-gray-300">Loading deposit information...</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 } 

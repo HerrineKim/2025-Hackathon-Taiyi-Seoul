@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export type ApiKeyData = {
   key_id: string;
@@ -36,7 +37,14 @@ export const columns: ColumnDef<ApiKeyData>[] = [
     accessorKey: "name",
     header: "API Key Name(ID)",
     cell: ({ row }) => {
-      return <div className="font-medium"><span className="text-gray-400">{row.original.name}</span> ({row.original.key_id})</div>;
+      return (
+        <Link 
+          href={`/my/usage/${row.original.key_id}`}
+          className="font-medium hover:text-blue-400 transition-colors"
+        >
+          <span className="text-gray-400">{row.original.name}</span> ({row.original.key_id})
+        </Link>
+      );
     },
   },
   {
