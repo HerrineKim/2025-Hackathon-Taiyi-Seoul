@@ -1,8 +1,8 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Integer, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
-from app.db.database import Base
+from app.database import Base
 
 class APIKey(Base):
     __tablename__ = "api_keys"
@@ -19,10 +19,6 @@ class APIKey(Base):
     # Usage tracking
     call_count = Column(Integer, default=0)
     last_used_at = Column(DateTime(timezone=True), nullable=True)
-    rate_limit_per_minute = Column(Integer, default=60)  # Default rate limit
-    
-    # Token consumption
-    token_consumption_rate = Column(Float, default=0.01)  # Tokens consumed per API call
     
     # Relationship
     user = relationship("User", back_populates="api_keys")

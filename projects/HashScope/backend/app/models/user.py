@@ -1,26 +1,24 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Float, Integer
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
-from app.db.database import Base
+from app.database import Base
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    wallet_address = Column(String, unique=True, index=True, nullable=False)
-    nonce = Column(String, nullable=False)  # For wallet authentication
-    is_active = Column(Boolean, default=True)
+    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
+    wallet_address = Column(String, unique=True, index=True)
+    balance = Column(Integer, default=0)  # 잔액은 블록체인에서 조회하므로 참조용
+    is_admin = Column(Boolean, default=False)  # 관리자 여부
+    nonce = Column(String, nullable=True)  # 인증에 사용되는 nonce
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Token deposit information
-    token_balance = Column(Float, default=0.0)  # Current token balance
-    deposit_contract_address = Column(String, nullable=True)  # Smart contract address for deposits
-    
-    # Relationships
-    api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
-    deposits = relationship("DepositTransaction", back_populates="user")
+
+    transactions = relationship("Transaction", back_populates="user")
+    api_keys = relationship("APIKey", back_populates="user")
     
     def __repr__(self):
-        return f"<User wallet_address={self.wallet_address}>"
+        return f"<User username={self.username}, wallet_address={self.wallet_address}>"
