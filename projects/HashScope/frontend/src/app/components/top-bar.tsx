@@ -8,16 +8,23 @@ import { Button } from '@/components/ui/button';
 import Link from "next/link";
 import { Coins } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function TopBar() {
   const { connected, account } = useSDK();
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedBalance = localStorage.getItem('tokenBalance');
     if (storedBalance) {
       setTokenBalance(Number(storedBalance));
     }
+    // Add a small delay to prevent flash of loading state
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -39,19 +46,24 @@ export function TopBar() {
               </span>
             </div>
           )}
-          <Link href="/my/profile">
+          {isLoading ? (
+            <Skeleton className="h-9 w-[120px] bg-gray-700" />
+          ) : (
             <Button 
+              asChild
               className="flex items-center justify-center bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base rounded-md hover:bg-blue-700 transition-colors"
             >
-              {connected ? (
-                <>
-                  {formatAddress(account)} <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="inline-block w-4 h-4 ml-2" width={20} height={20} />
-                </>
-              ) : (
-                'Sign In'
-              )}
+              <Link href="/my/profile">
+                {connected ? (
+                  <>
+                    {formatAddress(account)} <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="inline-block w-4 h-4 ml-2" width={20} height={20} />
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </Link>
             </Button>
-          </Link>
+          )}
         </div>
       </div>
     </div>

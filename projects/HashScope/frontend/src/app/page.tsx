@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { ArrowRight, Key, LineChart, Database, Coins } from 'lucide-react';
+import { useSDK } from '@metamask/sdk-react';
 
 export default function Home() {
+  const { connected } = useSDK();
+
   return (
     <div className="min-h-screen bg-gray-800">
       <main className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full py-12">
@@ -16,10 +19,10 @@ export default function Home() {
             AI-powered crypto market prediction and automated trading platform on HSK Chain
           </p>
           <Link
-            href="/sign-in"
+            href={connected ? "/hot" : "/my/profile"}
             className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-lg transition-colors"
           >
-            Get Started <ArrowRight className="ml-2 w-5 h-5" />
+            {connected ? 'Explore Hot APIs' : 'Get Started'} <ArrowRight className="ml-2 w-5 h-5" />
           </Link>
         </div>
 

@@ -46,7 +46,6 @@ export default function MetaMaskAuth() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMetaMaskConnected, setIsMetaMaskConnected] = useState(false);
 
   // Function to check MetaMask connection
@@ -74,7 +73,6 @@ export default function MetaMaskAuth() {
     if (accounts.length === 0) {
       setIsMetaMaskConnected(false);
       setAccount(null);
-      setIsLoggedIn(false);
       localStorage.removeItem('authToken');
       localStorage.removeItem('account');
       localStorage.removeItem('tokenBalance');
@@ -96,7 +94,6 @@ export default function MetaMaskAuth() {
         if (storedBalance) {
           setTokenBalance(Number(storedBalance));
         }
-        setIsLoggedIn(true);
       }
 
       // Check MetaMask connection
@@ -120,7 +117,7 @@ export default function MetaMaskAuth() {
     checkExistingSession();
   }, []);
 
-  const enableMetaMask = async () => {
+  const connectAndLogin = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -129,40 +126,24 @@ export default function MetaMaskAuth() {
         throw new Error('Please install MetaMask!');
       }
 
+      // 1. Connect MetaMask
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (Array.isArray(accounts) && accounts.length > 0) {
-        const newAccount = accounts[0] as string;
-        setAccount(newAccount);
-        setIsMetaMaskConnected(true);
-        localStorage.setItem('account', newAccount);
+      if (!Array.isArray(accounts) || accounts.length === 0) {
+        throw new Error('No accounts found');
       }
-    } catch (err) {
-      console.error('Error enabling MetaMask:', err);
-      setError(err instanceof Error ? err.message : 'Failed to enable MetaMask');
-      setIsMetaMaskConnected(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const newAccount = accounts[0] as string;
+      setAccount(newAccount);
+      setIsMetaMaskConnected(true);
+      localStorage.setItem('account', newAccount);
 
-  const loginWithMetaMask = async () => {
-    if (!isMetaMaskConnected || !account) {
-      setError('Please connect your wallet first');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // 1. Get nonce from backend
+      // 2. Get nonce from backend
       const nonceResponse = await fetch(`${API_BASE_URL}/auth/nonce`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          wallet_address: account
+          wallet_address: newAccount
         }),
       });
 
@@ -173,20 +154,20 @@ export default function MetaMaskAuth() {
 
       const nonceData: NonceResponse = await nonceResponse.json();
 
-      // 2. Sign the message using MetaMask
+      // 3. Sign the message using MetaMask
       const signature = await window.ethereum.request({
         method: 'personal_sign',
-        params: [nonceData.message, account]
+        params: [nonceData.message, newAccount]
       }) as string;
 
-      // 3. Verify signature with backend
+      // 4. Verify signature with backend
       const verifyResponse = await fetch(`${API_BASE_URL}/auth/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          wallet_address: account,
+          wallet_address: newAccount,
           signature: signature
         }),
       });
@@ -198,14 +179,16 @@ export default function MetaMaskAuth() {
 
       const verifyData: VerifyResponse = await verifyResponse.json();
       
-      // Store the token and update balance
+      // 5. Store the token and update balance
       localStorage.setItem('authToken', verifyData.access_token);
-      localStorage.setItem('tokenBalance', verifyData.token_balance.toString());
-      setTokenBalance(verifyData.token_balance);
-      setIsLoggedIn(true);
+      if (verifyData.token_balance !== undefined) {
+        localStorage.setItem('tokenBalance', verifyData.token_balance.toString());
+        setTokenBalance(verifyData.token_balance);
+      }
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to login');
+      console.error('Connect and login error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect and login');
+      setIsMetaMaskConnected(false);
     } finally {
       setLoading(false);
     }
@@ -216,7 +199,6 @@ export default function MetaMaskAuth() {
       await sdk?.disconnect();
       setAccount(null);
       setTokenBalance(null);
-      setIsLoggedIn(false);
       setIsMetaMaskConnected(false);
       localStorage.removeItem('authToken');
       localStorage.removeItem('account');
@@ -236,7 +218,7 @@ export default function MetaMaskAuth() {
       )}
 
       {isMetaMaskConnected && account && (
-        <div className="mb-6 p-4 bg-green-900/50 rounded-lg">
+        <div className="mb-6 p-4 bg-green-900/50 rounded-lg max-w-md mx-auto">
           <div className="flex items-center space-x-2">
             <div className="relative">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -251,26 +233,17 @@ export default function MetaMaskAuth() {
         </div>
       )}
 
-      <section className="space-y-4">
-        <button
-          onClick={enableMetaMask}
-          disabled={loading || isMetaMaskConnected}
-          className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
-          {loading ? 'Connecting...' : isMetaMaskConnected ? 'Connected' : 'Connect Wallet'}
-        </button>
-
-        <button
-          onClick={loginWithMetaMask}
-          disabled={!isMetaMaskConnected || loading || isLoggedIn}
-          className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
-          {loading ? 'Logging in...' : isLoggedIn ? 'Already Logged In' : 'Login with Wallet'}
-        </button>
-
-        {isMetaMaskConnected && (
+      <section className="space-y-4 max-w-md mx-auto">
+        {!isMetaMaskConnected ? (
+          <button
+            onClick={connectAndLogin}
+            disabled={loading}
+            className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
+            {loading ? 'Connecting...' : 'Connect & Login with Wallet'}
+          </button>
+        ) : (
           <button
             onClick={logout}
             disabled={loading}
