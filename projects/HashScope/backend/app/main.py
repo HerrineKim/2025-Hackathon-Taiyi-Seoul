@@ -5,7 +5,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.openapi.docs import get_swagger_ui_html
 import os
 
-from app.routers import users, auth, api_keys
+from app.routers import users, auth, api_keys, crypto
 from app.database import engine, Base, init_db, get_db
 from app.auth.dependencies import get_current_user
 
@@ -142,6 +142,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(api_keys.router, prefix="/api-keys", tags=["API Keys"])
+app.include_router(crypto.router, prefix="/crypto", tags=["Cryptocurrency Data"])
 
 # 커스텀 OpenAPI 스키마 정의
 def custom_openapi():
