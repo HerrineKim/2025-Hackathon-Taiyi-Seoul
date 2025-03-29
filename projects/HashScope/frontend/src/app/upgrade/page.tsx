@@ -7,7 +7,7 @@ import { Coins, ArrowRight } from 'lucide-react';
 interface TierInfo {
   name: string;
   color: string;
-  feeRate: number;
+  price: number;
   rateLimit: number;
   minBalance: number;
   description: string;
@@ -17,7 +17,7 @@ const tiers: TierInfo[] = [
   {
     name: 'Gold',
     color: 'from-yellow-400 to-yellow-600',
-    feeRate: 0.5,
+    price: 50,
     rateLimit: 1000,
     minBalance: 10000,
     description: 'Best for high-volume traders and professional users'
@@ -25,7 +25,7 @@ const tiers: TierInfo[] = [
   {
     name: 'Silver',
     color: 'from-gray-400 to-gray-600',
-    feeRate: 1.0,
+    price: 70,
     rateLimit: 500,
     minBalance: 5000,
     description: 'Perfect for active traders and regular users'
@@ -33,9 +33,9 @@ const tiers: TierInfo[] = [
   {
     name: 'Bronze',
     color: 'from-amber-700 to-amber-900',
-    feeRate: 2.0,
+    price: 100,
     rateLimit: 100,
-    minBalance: 1000,
+    minBalance: 0,
     description: 'Great for getting started with basic features'
   }
 ];
@@ -116,7 +116,7 @@ export default function UpgradePage() {
   return (
     <div className="min-h-screen bg-gray-800 p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-8 text-center">Subscription Tiers</h1>
+        <h1 className="text-2xl font-semibold text-white mb-8">Usage Tiers</h1>
         
         {/* Tier Boxes */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
@@ -136,8 +136,8 @@ export default function UpgradePage() {
                 <h3 className="text-xl font-bold mb-4">{tier.name} Tier</h3>
                 <div className="space-y-3">
                   <p className="flex justify-between">
-                    <span>Fee Rate:</span>
-                    <span className="font-semibold">{tier.feeRate}%</span>
+                    <span>Usage Fee:</span>
+                    <span className="font-semibold">{tier.price}%</span>
                   </p>
                   <p className="flex justify-between">
                     <span>Rate Limit:</span>
