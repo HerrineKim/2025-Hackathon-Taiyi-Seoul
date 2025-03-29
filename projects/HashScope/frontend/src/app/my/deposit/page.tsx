@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { ethers } from "ethers"
 
 interface DepositInfo {
   message: string
@@ -11,29 +12,96 @@ interface DepositInfo {
   amount: number
 }
 
-interface HashKeyProvider {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
-  isConnected: () => boolean
-  on: (eventName: string, callback: (accounts: string[]) => void) => void
-  removeListener: (eventName: string, callback: (accounts: string[]) => void) => void
-  utils: {
-    toWei: (value: string, unit: string) => string
+// HSKDeposit contract ABI
+const HSKDepositABI = [
+  {
+    "inputs": [],
+    "name": "deposit",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   }
-}
+]
 
-declare global {
-  interface Window {
-    hashkey?: HashKeyProvider
-  }
-}
+// HSK network settings
+const HSK_RPC_URL = process.env.NEXT_PUBLIC_HSK_RPC_URL || 'https://mainnet.hsk.xyz'
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_HSK_DEPOSIT_CONTRACT || '0x1234567890123456789012345678901234567890'
 
 export default function DepositPage() {
   const [depositInfo, setDepositInfo] = useState<DepositInfo | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [account, setAccount] = useState<string | null>(null)
+  const [userBalance, setUserBalance] = useState('0')
 
   useEffect(() => {
+    checkConnection()
     fetchDepositInfo()
+    
+    // Account change event listener
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+        setAccount(accounts[0])
+        if (accounts[0]) {
+          fetchUserBalance(accounts[0])
+        }
+      })
+    }
+    
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', () => {})
+      }
+    }
   }, [])
+
+  const checkConnection = async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[]
+        setAccount(accounts[0])
+        if (accounts[0]) {
+          await fetchUserBalance(accounts[0])
+        }
+      } catch (error) {
+        console.error('Connection error:', error)
+        toast.error("Failed to connect wallet")
+      }
+    } else {
+      toast.error("Please install HashKey wallet")
+    }
+  }
+
+  const fetchUserBalance = async (userAddress: string) => {
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(HSK_RPC_URL)
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, HSKDepositABI, provider)
+      
+      const balance = await contract.getBalance(userAddress)
+      setUserBalance(ethers.utils.formatEther(balance))
+    } catch (error) {
+      console.error('Balance fetch error:', error)
+      toast.error("Failed to fetch balance")
+    }
+  }
 
   const fetchDepositInfo = async () => {
     try {
@@ -59,31 +127,39 @@ export default function DepositPage() {
   }
 
   const handleDeposit = async () => {
-    if (!depositInfo) return
+    if (!depositInfo || !account) return
 
     setIsLoading(true)
     try {
-      const hashkey = window.hashkey as HashKeyProvider | undefined
-      if (!hashkey) {
-        throw new Error("HashKey is not installed")
+      if (!window.ethereum) {
+        throw new Error("HashKey wallet is not installed")
       }
 
-      const accounts = await hashkey.request({
-        method: "eth_requestAccounts",
-      }) as string[]
-
-      const transaction = {
-        from: accounts[0],
-        to: depositInfo.deposit_address,
-        value: hashkey.utils.toWei(depositInfo.amount.toString(), "ether"),
-      }
-
-      const txHash = await hashkey.request({
-        method: "eth_sendTransaction",
-        params: [transaction],
+      // Switch to HSK network (chain ID needs to be updated for HSK network)
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x1' }], // Update with actual HSK network chain ID
       })
 
-      toast.success(`Transaction sent! Hash: ${txHash}`)
+      // Connect wallet
+      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const signer = provider.getSigner()
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, HSKDepositABI, signer)
+
+      // Convert amount to wei
+      const amountWei = ethers.utils.parseEther(depositInfo.amount.toString())
+
+      // Call deposit function
+      const tx = await contract.deposit({ value: amountWei })
+      toast.info("Transaction submitted. Waiting for confirmation...")
+
+      // Wait for transaction confirmation
+      await tx.wait()
+
+      // Update balance after successful deposit
+      await fetchUserBalance(account)
+
+      toast.success("Deposit successful!")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send transaction")
     } finally {
@@ -102,11 +178,15 @@ export default function DepositPage() {
           {depositInfo ? (
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-500">Deposit Address</p>
-                <p className="font-mono break-all">{depositInfo.deposit_address}</p>
+                <p className="text-sm text-gray-500">Connected Wallet</p>
+                <p className="font-mono break-all">{account || "Not connected"}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Amount</p>
+                <p className="text-sm text-gray-500">Current Balance</p>
+                <p>{userBalance} HSK</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Deposit Amount</p>
                 <p>{depositInfo.amount} HSK</p>
               </div>
               <div>
@@ -115,7 +195,7 @@ export default function DepositPage() {
               </div>
               <Button
                 onClick={handleDeposit}
-                disabled={isLoading}
+                disabled={isLoading || !account}
                 className="w-full"
               >
                 {isLoading ? "Processing..." : "Deposit with HashKey"}
