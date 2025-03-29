@@ -1,4 +1,4 @@
-import { Home, Flame, Search, Info, Activity, User, Key, Wallet } from "lucide-react"
+import { Home, Flame, Search, Activity, User, Key, Wallet, ChevronsUp } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -28,9 +28,9 @@ const mainItems = [
     icon: Search,
   },
   {
-    title: "About Tier",
-    url: "/about",
-    icon: Info,
+    title: "Upgrade",
+    url: "/upgrade",
+    icon: ChevronsUp,
   },
 ]
 

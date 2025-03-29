@@ -40,17 +40,67 @@ const tiers: TierInfo[] = [
   }
 ];
 
-export default function TierPage() {
-  const [tokenBalance, setTokenBalance] = useState<number | null>(null);
+export default function UpgradePage() {
+  const [tokenBalance, setTokenBalance] = useState<string>('0');
   const [currentTier, setCurrentTier] = useState<string>('Bronze');
+  const [account, setAccount] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedBalance = localStorage.getItem('tokenBalance');
-    if (storedBalance) {
-      const balance = Number(storedBalance);
-      setTokenBalance(balance);
+    checkConnection();
+    
+    // Account change event listener
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+        setAccount(accounts[0]);
+        if (accounts[0]) {
+          fetchUserBalance(accounts[0]);
+        }
+      });
+    }
+    
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', () => {});
+      }
+    };
+  }, []);
+
+  const checkConnection = async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
+        setAccount(accounts[0]);
+        if (accounts[0]) {
+          await fetchUserBalance(accounts[0]);
+        }
+      } catch (error) {
+        console.error('Connection error:', error);
+      }
+    }
+  };
+
+  const fetchUserBalance = async (userAddress: string) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/${userAddress}/balance`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch balance");
+      }
+
+      const data = await response.json();
+      setTokenBalance(data.formatted_balance || '0');
       
       // Determine current tier based on balance
+      const balance = parseFloat(data.formatted_balance || '0');
       if (balance >= 10000) {
         setCurrentTier('Gold');
       } else if (balance >= 5000) {
@@ -58,8 +108,10 @@ export default function TierPage() {
       } else if (balance >= 1000) {
         setCurrentTier('Bronze');
       }
+    } catch (error) {
+      console.error('Balance fetch error:', error);
     }
-  }, []);
+  };
 
   return (
     <div className="min-h-screen bg-gray-800 p-6">
@@ -93,7 +145,7 @@ export default function TierPage() {
                   </p>
                   <p className="flex justify-between">
                     <span>Min Balance:</span>
-                    <span className="font-semibold">{tier.minBalance} HSK</span>
+                    <span className="font-semibold">{tier.minBalance}</span>
                   </p>
                 </div>
                 <p className="mt-4 text-sm opacity-90">{tier.description}</p>
@@ -110,7 +162,7 @@ export default function TierPage() {
               <div className="flex items-center space-x-2">
                 <Coins className="w-6 h-6 text-yellow-400" />
                 <span className="text-2xl font-bold text-white">
-                  {tokenBalance !== null ? `${tokenBalance.toLocaleString()} HSK` : 'Not Connected'}
+                  {account ? `${tokenBalance}` : 'Connect Wallet'}
                 </span>
               </div>
             </div>
@@ -124,7 +176,7 @@ export default function TierPage() {
         {/* Action Button */}
         <div className="text-center">
           <Link
-            href="/my/profile"
+            href="/my/deposit"
             className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-lg transition-colors"
           >
             Deposit and upgrade your tier now
