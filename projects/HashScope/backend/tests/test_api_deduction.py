@@ -12,9 +12,11 @@ import time
 import json
 from datetime import datetime
 
-# API 키 설정
-API_KEY_ID = "hsk_1703f2490e82744d10bbb6c4614fec8a"
-API_KEY_SECRET = "sk_b862009213124d37979ab42e7cfe9024db5a49e61826e4e0cf3b1a6af6a7171f"
+from dotenv import load_dotenv
+load_dotenv()
+
+API_KEY_ID = os.getenv("API_KEY_ID")
+API_KEY_SECRET = os.getenv("API_KEY_SECRET")
 
 # 서버 URL 설정
 BASE_URL = "https://hashkey.sungwoonsong.com"  
