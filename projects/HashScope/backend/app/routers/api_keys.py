@@ -211,8 +211,8 @@ async def get_api_key_history(
     
     Returns:
     - Total number of calls
-    - Total cost
-    - Usage statistics per endpoint (endpoint, HTTP method, call count, last used time, total cost)
+    - Total cost in HSK
+    - Usage statistics per endpoint (endpoint, HTTP method, call count, last used time, total cost in HSK)
     
     Requires authentication via JWT token.
     """
@@ -238,10 +238,16 @@ async def get_api_key_history(
     total_calls = 0
     total_cost = 0.0
     
+    # Wei to HSK 변환 상수 (1 HSK = 10^18 wei)
+    WEI_TO_HSK = 10**18
+    
     for usage in api_usages:
         endpoint_key = f"{usage.method}:{usage.endpoint}"
         total_calls += 1
-        total_cost += usage.cost
+        
+        # Wei를 HSK로 변환
+        cost_in_hsk = usage.cost / WEI_TO_HSK if usage.cost else 0
+        total_cost += cost_in_hsk
         
         if endpoint_key not in endpoint_stats:
             endpoint_stats[endpoint_key] = {
@@ -249,11 +255,11 @@ async def get_api_key_history(
                 "method": usage.method,
                 "call_count": 1,
                 "last_used_at": usage.timestamp,
-                "total_cost": usage.cost
+                "total_cost": cost_in_hsk
             }
         else:
             endpoint_stats[endpoint_key]["call_count"] += 1
-            endpoint_stats[endpoint_key]["total_cost"] += usage.cost
+            endpoint_stats[endpoint_key]["total_cost"] += cost_in_hsk
             if usage.timestamp > endpoint_stats[endpoint_key]["last_used_at"]:
                 endpoint_stats[endpoint_key]["last_used_at"] = usage.timestamp
     
