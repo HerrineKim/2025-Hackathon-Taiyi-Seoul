@@ -129,3 +129,37 @@ The main contract that handles HSK token deposits and usage fee deductions.
 
 The smart contracts are deployed on the HSK blockchain at the following addresses:
 - HSKDeposit: `0x0D313B22601E7AD450DC9b8b78aB0b0014022269`
+
+## API Usage Examples
+
+```bash
+curl -X GET \
+  https://hashkey.sungwoonsong.com/api/crypto/btc/usd \
+  -H 'api-key-id: your_api_key_id' \
+  -H 'api-key-secret: your_api_key_secret'
+```
+
+```bash
+curl -X POST \
+  https://hashkey.sungwoonsong.com/api/api-keys \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "My API Key", "description": "This is my API key"}'
+```
+
+```bash
+curl -X GET \
+  https://hashkey.sungwoonsong.com/api/api-keys/{key_id} \
+  -H 'Content-Type: application/json'
+```
+
+```bash
+curl -X GET \
+  https://hashkey.sungwoonsong.com/api/api-keys/{key_id}/usage \
+  -H 'Content-Type: application/json'
+```
+
+```bash
+curl -X GET \
+  https://hashkey.sungwoonsong.com/api/api-keys/{key_id}/history \
+  -H 'Content-Type: application/json'
+```

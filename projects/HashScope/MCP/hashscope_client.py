@@ -13,14 +13,14 @@ class HashScopeClient:
     Client for interacting with the HashScope API.
     """
     
-    def __init__(self, api_key_id: str, api_key_secret: str, base_url: str = "https://api.hashscope.io"):
+    def __init__(self, api_key_id: str, api_key_secret: str, base_url: str = "https://hashkey.sungwoonsong.com/api"):
         """
         Initialize the HashScope API client.
         
         Args:
             api_key_id: The API key ID
             api_key_secret: The API key secret
-            base_url: The base URL for the HashScope API (default: https://api.hashscope.io)
+            base_url: The base URL for the HashScope API (default: https://hashkey.sungwoonsong.com/api)
         """
         self.api_key_id = api_key_id
         self.api_key_secret = api_key_secret
@@ -76,118 +76,132 @@ class HashScopeClient:
             raise Exception(f"HashScope API error: {error_message}")
     
     # Crypto Price API
-    def get_crypto_price(self, symbol: str, currency: str = "USD") -> Dict[str, Any]:
+    def get_btc_usd(self) -> Dict[str, Any]:
         """
-        Get the current price of a cryptocurrency.
+        Get the current BTC price in USD from Binance.
         
-        Args:
-            symbol: The cryptocurrency symbol (e.g., BTC, ETH)
-            currency: The currency to convert to (default: USD)
-            
         Returns:
-            The current price data
+            The current BTC/USD price data
         """
-        return self._make_request('get', f'/crypto/price', params={'symbol': symbol, 'currency': currency})
+        return self._make_request('get', '/crypto/btc/usd')
     
-    def get_crypto_historical_prices(self, symbol: str, currency: str = "USD", 
-                                    interval: str = "1d", limit: int = 30) -> Dict[str, Any]:
+    def get_btc_krw(self) -> Dict[str, Any]:
         """
-        Get historical prices of a cryptocurrency.
+        Get the current BTC price in KRW from Upbit.
         
-        Args:
-            symbol: The cryptocurrency symbol (e.g., BTC, ETH)
-            currency: The currency to convert to (default: USD)
-            interval: The time interval (e.g., 1h, 1d, 1w)
-            limit: The number of data points to return (default: 30)
-            
         Returns:
-            Historical price data
+            The current BTC/KRW price data
         """
-        return self._make_request('get', f'/crypto/historical-prices', 
-                                params={'symbol': symbol, 'currency': currency, 
-                                        'interval': interval, 'limit': limit})
+        return self._make_request('get', '/crypto/btc/krw')
     
-    # Market Data API
-    def get_market_data(self, symbol: str) -> Dict[str, Any]:
+    def get_usdt_krw(self) -> Dict[str, Any]:
         """
-        Get market data for a cryptocurrency.
+        Get the current USDT price in KRW from Upbit.
         
-        Args:
-            symbol: The cryptocurrency symbol (e.g., BTC, ETH)
-            
         Returns:
-            Market data including volume, market cap, etc.
+            The current USDT/KRW price data
         """
-        return self._make_request('get', f'/crypto/market-data', params={'symbol': symbol})
+        return self._make_request('get', '/crypto/usdt/krw')
     
-    def get_trending_coins(self, limit: int = 10) -> Dict[str, Any]:
+    def get_kimchi_premium(self) -> Dict[str, Any]:
         """
-        Get trending cryptocurrencies.
+        Get the kimchi premium percentage between Korean and global markets.
         
-        Args:
-            limit: The number of trending coins to return (default: 10)
-            
         Returns:
-            List of trending cryptocurrencies
+            The current kimchi premium data
         """
-        return self._make_request('get', f'/crypto/trending', params={'limit': limit})
+        return self._make_request('get', '/crypto/kimchi-premium')
     
-    # On-chain Data API
-    def get_onchain_data(self, symbol: str, metric: str) -> Dict[str, Any]:
+    # Social Media API
+    def get_trump_posts(self) -> Dict[str, Any]:
         """
-        Get on-chain data for a cryptocurrency.
+        Get Donald Trump's latest posts from Truth Social.
         
-        Args:
-            symbol: The cryptocurrency symbol (e.g., BTC, ETH)
-            metric: The on-chain metric to retrieve (e.g., active_addresses, transaction_count)
-            
         Returns:
-            On-chain data for the specified metric
+            Latest posts from Donald Trump
         """
-        return self._make_request('get', f'/crypto/onchain', params={'symbol': symbol, 'metric': metric})
+        return self._make_request('get', '/social/trump')
     
-    def get_wallet_balance(self, address: str, chain: str) -> Dict[str, Any]:
+    def get_elon_posts(self) -> Dict[str, Any]:
         """
-        Get the balance of a wallet address.
+        Get Elon Musk's latest posts from X (Twitter).
         
-        Args:
-            address: The wallet address
-            chain: The blockchain (e.g., ethereum, bitcoin)
-            
         Returns:
-            Wallet balance information
+            Latest posts from Elon Musk
         """
-        return self._make_request('get', f'/crypto/wallet-balance', 
-                                params={'address': address, 'chain': chain})
+        return self._make_request('get', '/social/elon')
     
-    # Social Data API
-    def get_social_sentiment(self, symbol: str, source: str = "all") -> Dict[str, Any]:
+    def get_x_trends(self) -> Dict[str, Any]:
         """
-        Get social sentiment data for a cryptocurrency.
+        Get current trending topics on X (Twitter).
         
-        Args:
-            symbol: The cryptocurrency symbol (e.g., BTC, ETH)
-            source: The data source (e.g., twitter, reddit, all)
-            
         Returns:
-            Social sentiment data
+            Current trending topics on X
         """
-        return self._make_request('get', f'/crypto/social-sentiment', 
-                                params={'symbol': symbol, 'source': source})
+        return self._make_request('get', '/social/x/trends')
     
-    def get_news(self, symbol: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
+    # Derivatives Market API
+    def get_funding_rates(self) -> Dict[str, Any]:
         """
-        Get latest news for cryptocurrencies.
+        Get current funding rates for major cryptocurrency futures markets.
         
-        Args:
-            symbol: The cryptocurrency symbol (optional)
-            limit: The number of news items to return (default: 10)
-            
         Returns:
-            Latest news data
+            Current funding rates data
         """
-        params = {'limit': limit}
-        if symbol:
-            params['symbol'] = symbol
+        return self._make_request('get', '/derivatives/funding-rates')
+    
+    def get_open_interest(self) -> Dict[str, Any]:
+        """
+        Get open interest ratios for major cryptocurrency derivatives.
         
-        return self._make_request('get', f'/crypto/news', params=params)
+        Returns:
+            Open interest data
+        """
+        return self._make_request('get', '/derivatives/open-interest')
+    
+    # Blockchain Projects API
+    def get_hsk_updates(self) -> Dict[str, Any]:
+        """
+        Get latest updates and developments from HashKey Chain.
+        
+        Returns:
+            Latest updates from HashKey Chain
+        """
+        return self._make_request('get', '/projects/hsk')
+    
+    def get_ethereum_standards(self) -> Dict[str, Any]:
+        """
+        Get information about new Ethereum standards and proposals.
+        
+        Returns:
+            Information about Ethereum standards
+        """
+        return self._make_request('get', '/projects/ethereum/standards')
+    
+    def get_solana_updates(self) -> Dict[str, Any]:
+        """
+        Get latest updates and developments from Solana blockchain.
+        
+        Returns:
+            Latest updates from Solana blockchain
+        """
+        return self._make_request('get', '/projects/solana')
+    
+    # Open Source API
+    def get_bitcoin_activity(self) -> Dict[str, Any]:
+        """
+        Get latest pull requests, stars, and activities from Bitcoin Core repository.
+        
+        Returns:
+            Latest activities from Bitcoin Core
+        """
+        return self._make_request('get', '/opensource/bitcoin')
+    
+    def get_ethereum_activity(self) -> Dict[str, Any]:
+        """
+        Get latest pull requests, stars, and activities from Ethereum Core repositories.
+        
+        Returns:
+            Latest activities from Ethereum Core
+        """
+        return self._make_request('get', '/opensource/ethereum')

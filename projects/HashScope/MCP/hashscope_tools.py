@@ -14,14 +14,14 @@ class HashScopeToolkit:
     Toolkit for HashScope API tools.
     """
     
-    def __init__(self, api_key_id: str, api_key_secret: str, base_url: str = "https://api.hashscope.io"):
+    def __init__(self, api_key_id: str, api_key_secret: str, base_url: str = "https://hashkey.sungwoonsong.com"):
         """
         Initialize the HashScope toolkit.
         
         Args:
             api_key_id: The API key ID
             api_key_secret: The API key secret
-            base_url: The base URL for the HashScope API (default: https://api.hashscope.io)
+            base_url: The base URL for the HashScope API (default: https://hashkey.sungwoonsong.com)
         """
         self.client = HashScopeClient(api_key_id, api_key_secret, base_url)
         
@@ -33,246 +33,350 @@ class HashScopeToolkit:
             A list of LangChain tools
         """
         return [
-            get_crypto_price_tool(self.client),
-            get_crypto_historical_prices_tool(self.client),
-            get_market_data_tool(self.client),
-            get_trending_coins_tool(self.client),
-            get_onchain_data_tool(self.client),
-            get_wallet_balance_tool(self.client),
-            get_social_sentiment_tool(self.client),
-            get_news_tool(self.client),
+            get_btc_usd_tool(self.client),
+            get_btc_krw_tool(self.client),
+            get_usdt_krw_tool(self.client),
+            get_kimchi_premium_tool(self.client),
+            get_trump_posts_tool(self.client),
+            get_elon_posts_tool(self.client),
+            get_x_trends_tool(self.client),
+            get_funding_rates_tool(self.client),
+            get_open_interest_tool(self.client),
+            get_hsk_updates_tool(self.client),
+            get_ethereum_standards_tool(self.client),
+            get_solana_updates_tool(self.client),
+            get_bitcoin_activity_tool(self.client),
+            get_ethereum_activity_tool(self.client),
         ]
 
 
-# Tool Input Schemas
-class CryptoPriceInput(BaseModel):
-    symbol: str = Field(..., description="The cryptocurrency symbol (e.g., BTC, ETH)")
-    currency: str = Field(default="USD", description="The currency to convert to (default: USD)")
-
-class HistoricalPricesInput(BaseModel):
-    symbol: str = Field(..., description="The cryptocurrency symbol (e.g., BTC, ETH)")
-    currency: str = Field(default="USD", description="The currency to convert to (default: USD)")
-    interval: str = Field(default="1d", description="The time interval (e.g., 1h, 1d, 1w)")
-    limit: int = Field(default=30, description="The number of data points to return (default: 30)")
-
-class MarketDataInput(BaseModel):
-    symbol: str = Field(..., description="The cryptocurrency symbol (e.g., BTC, ETH)")
-
-class TrendingCoinsInput(BaseModel):
-    limit: int = Field(default=10, description="The number of trending coins to return (default: 10)")
-
-class OnchainDataInput(BaseModel):
-    symbol: str = Field(..., description="The cryptocurrency symbol (e.g., BTC, ETH)")
-    metric: str = Field(..., description="The on-chain metric to retrieve (e.g., active_addresses, transaction_count)")
-
-class WalletBalanceInput(BaseModel):
-    address: str = Field(..., description="The wallet address")
-    chain: str = Field(..., description="The blockchain (e.g., ethereum, bitcoin)")
-
-class SocialSentimentInput(BaseModel):
-    symbol: str = Field(..., description="The cryptocurrency symbol (e.g., BTC, ETH)")
-    source: str = Field(default="all", description="The data source (e.g., twitter, reddit, all)")
-
-class NewsInput(BaseModel):
-    symbol: Optional[str] = Field(default=None, description="The cryptocurrency symbol (optional)")
-    limit: int = Field(default=10, description="The number of news items to return (default: 10)")
-
-
-# Tool Definitions
-def get_crypto_price_tool(client: HashScopeClient) -> BaseTool:
-    """Create a tool for getting cryptocurrency prices."""
+# Tool Definitions for Cryptocurrency Data
+def get_btc_usd_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting BTC/USD price."""
     
-    def _run(symbol: str, currency: str = "USD") -> str:
+    def _run() -> str:
         try:
-            result = client.get_crypto_price(symbol, currency)
-            return f"Current price of {symbol} is {result['price']} {currency}. Last updated: {result['last_updated']}"
+            result = client.get_btc_usd()
+            return f"Current price of BTC is {result['price']} USD. Last updated: {result['timestamp']}"
         except Exception as e:
-            return f"Error fetching price: {str(e)}"
+            return f"Error fetching BTC/USD price: {str(e)}"
     
-    return StructuredTool.from_function(
+    return Tool.from_function(
         func=_run,
-        name="get_crypto_price",
-        description="Get the current price of a cryptocurrency. Input should be the symbol (e.g., BTC, ETH) and optionally the currency (default: USD).",
-        args_schema=CryptoPriceInput,
+        name="get_btc_usd_price",
+        description="Get the current BTC price in USD from Binance.",
     )
 
-def get_crypto_historical_prices_tool(client: HashScopeClient) -> BaseTool:
-    """Create a tool for getting historical cryptocurrency prices."""
+def get_btc_krw_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting BTC/KRW price."""
     
-    def _run(symbol: str, currency: str = "USD", interval: str = "1d", limit: int = 30) -> str:
+    def _run() -> str:
         try:
-            result = client.get_crypto_historical_prices(symbol, currency, interval, limit)
-            prices = result['prices']
-            summary = f"Historical prices for {symbol} ({currency}) with {interval} interval (last {len(prices)} data points):\n"
-            
-            # Format a summary of the data
-            for i, price_data in enumerate(prices[:5]):
-                summary += f"- {price_data['date']}: {price_data['price']} {currency}\n"
-            
-            if len(prices) > 5:
-                summary += f"... and {len(prices) - 5} more data points\n"
-                
-            summary += f"\nPrice change: {result['price_change_percentage']}%"
-            return summary
+            result = client.get_btc_krw()
+            return f"Current price of BTC is {result['price']} KRW. Last updated: {result['timestamp']}"
         except Exception as e:
-            return f"Error fetching historical prices: {str(e)}"
+            return f"Error fetching BTC/KRW price: {str(e)}"
     
-    return StructuredTool.from_function(
+    return Tool.from_function(
         func=_run,
-        name="get_crypto_historical_prices",
-        description="Get historical prices of a cryptocurrency. Input should include the symbol, and optionally currency, interval, and limit.",
-        args_schema=HistoricalPricesInput,
+        name="get_btc_krw_price",
+        description="Get the current BTC price in KRW from Upbit.",
     )
 
-def get_market_data_tool(client: HashScopeClient) -> BaseTool:
-    """Create a tool for getting cryptocurrency market data."""
+def get_usdt_krw_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting USDT/KRW price."""
     
-    def _run(symbol: str) -> str:
+    def _run() -> str:
         try:
-            result = client.get_market_data(symbol)
-            return (f"Market data for {symbol}:\n"
-                   f"- Market Cap: ${result['market_cap']:,}\n"
-                   f"- 24h Volume: ${result['volume_24h']:,}\n"
-                   f"- Circulating Supply: {result['circulating_supply']:,} {symbol}\n"
-                   f"- Max Supply: {result['max_supply']:,} {symbol}\n"
-                   f"- Rank: #{result['market_cap_rank']}")
+            result = client.get_usdt_krw()
+            return f"Current price of USDT is {result['price']} KRW. Last updated: {result['timestamp']}"
         except Exception as e:
-            return f"Error fetching market data: {str(e)}"
+            return f"Error fetching USDT/KRW price: {str(e)}"
     
-    return StructuredTool.from_function(
+    return Tool.from_function(
         func=_run,
-        name="get_crypto_market_data",
-        description="Get market data for a cryptocurrency including market cap, volume, and supply information.",
-        args_schema=MarketDataInput,
+        name="get_usdt_krw_price",
+        description="Get the current USDT price in KRW from Upbit.",
     )
 
-def get_trending_coins_tool(client: HashScopeClient) -> BaseTool:
-    """Create a tool for getting trending cryptocurrencies."""
+def get_kimchi_premium_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting kimchi premium."""
     
-    def _run(limit: int = 10) -> str:
+    def _run() -> str:
         try:
-            result = client.get_trending_coins(limit)
-            coins = result['coins']
+            result = client.get_kimchi_premium()
+            return f"Current kimchi premium is {result['premium']}%. BTC/USD: ${result['btc_usd']}, BTC/KRW: ₩{result['btc_krw']}, USDT/KRW: ₩{result['usdt_krw']}"
+        except Exception as e:
+            return f"Error fetching kimchi premium: {str(e)}"
+    
+    return Tool.from_function(
+        func=_run,
+        name="get_kimchi_premium",
+        description="Get the kimchi premium percentage between Korean and global markets.",
+    )
+
+# Tool Definitions for Social Media
+def get_trump_posts_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting Trump's latest posts."""
+    
+    def _run() -> str:
+        try:
+            posts = client.get_trump_posts()
+            response = "Donald Trump's latest posts from Truth Social:\n\n"
             
-            response = f"Top {len(coins)} trending cryptocurrencies:\n"
-            for i, coin in enumerate(coins, 1):
-                response += f"{i}. {coin['name']} ({coin['symbol']}): ${coin['price']} ({coin['price_change_24h']}%)\n"
+            for i, post in enumerate(posts, 1):
+                response += f"{i}. [{post['timestamp']}] {post['content']}\n"
+                response += f"   Likes: {post['likes']}, Reposts: {post['reposts']}\n\n"
             
             return response
         except Exception as e:
-            return f"Error fetching trending coins: {str(e)}"
+            return f"Error fetching Trump's posts: {str(e)}"
     
-    return StructuredTool.from_function(
+    return Tool.from_function(
         func=_run,
-        name="get_trending_coins",
-        description="Get a list of trending cryptocurrencies.",
-        args_schema=TrendingCoinsInput,
+        name="get_trump_posts",
+        description="Get Donald Trump's latest posts from Truth Social.",
     )
 
-def get_onchain_data_tool(client: HashScopeClient) -> BaseTool:
-    """Create a tool for getting on-chain data."""
+def get_elon_posts_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting Elon Musk's latest posts."""
     
-    def _run(symbol: str, metric: str) -> str:
+    def _run() -> str:
         try:
-            result = client.get_onchain_data(symbol, metric)
+            posts = client.get_elon_posts()
+            response = "Elon Musk's latest posts from X (Twitter):\n\n"
             
-            response = f"On-chain {metric} data for {symbol}:\n"
-            if isinstance(result['data'], list):
-                for item in result['data'][:5]:
-                    response += f"- {item['date']}: {item['value']}\n"
-                
-                if len(result['data']) > 5:
-                    response += f"... and {len(result['data']) - 5} more data points\n"
-            else:
-                response += f"Current value: {result['data']}\n"
+            for i, post in enumerate(posts, 1):
+                response += f"{i}. [{post['timestamp']}] {post['content']}\n"
+                response += f"   Likes: {post['likes']}, Reposts: {post['reposts']}\n\n"
             
             return response
         except Exception as e:
-            return f"Error fetching on-chain data: {str(e)}"
+            return f"Error fetching Elon Musk's posts: {str(e)}"
     
-    return StructuredTool.from_function(
+    return Tool.from_function(
         func=_run,
-        name="get_crypto_onchain_data",
-        description="Get on-chain data for a cryptocurrency. Available metrics include: active_addresses, transaction_count, transaction_volume, average_transaction_fee, mining_difficulty, etc.",
-        args_schema=OnchainDataInput,
+        name="get_elon_posts",
+        description="Get Elon Musk's latest posts from X (Twitter).",
     )
 
-def get_wallet_balance_tool(client: HashScopeClient) -> BaseTool:
-    """Create a tool for getting wallet balance."""
+def get_x_trends_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting X (Twitter) trends."""
     
-    def _run(address: str, chain: str) -> str:
+    def _run() -> str:
         try:
-            result = client.get_wallet_balance(address, chain)
+            trends = client.get_x_trends()
+            response = "Current trending topics on X (Twitter):\n\n"
             
-            response = f"Wallet balance for {address} on {chain}:\n"
-            for token in result['tokens']:
-                response += f"- {token['symbol']}: {token['balance']} (${token['usd_value']:,.2f})\n"
-            
-            response += f"\nTotal value: ${result['total_usd_value']:,.2f}"
-            return response
-        except Exception as e:
-            return f"Error fetching wallet balance: {str(e)}"
-    
-    return StructuredTool.from_function(
-        func=_run,
-        name="get_wallet_balance",
-        description="Get the balance of a wallet address on a specific blockchain.",
-        args_schema=WalletBalanceInput,
-    )
-
-def get_social_sentiment_tool(client: HashScopeClient) -> BaseTool:
-    """Create a tool for getting social sentiment data."""
-    
-    def _run(symbol: str, source: str = "all") -> str:
-        try:
-            result = client.get_social_sentiment(symbol, source)
-            
-            response = f"Social sentiment for {symbol} from {source}:\n"
-            response += f"- Overall sentiment: {result['sentiment']}\n"
-            response += f"- Positive: {result['positive_percentage']}%\n"
-            response += f"- Neutral: {result['neutral_percentage']}%\n"
-            response += f"- Negative: {result['negative_percentage']}%\n"
-            
-            if 'trending_topics' in result:
-                response += "\nTrending topics:\n"
-                for topic in result['trending_topics'][:5]:
-                    response += f"- {topic}\n"
+            for i, trend in enumerate(trends, 1):
+                response += f"{i}. {trend['name']} - {trend['tweet_count']} tweets\n"
+                response += f"   Category: {trend['category']}\n\n"
             
             return response
         except Exception as e:
-            return f"Error fetching social sentiment: {str(e)}"
+            return f"Error fetching X trends: {str(e)}"
     
-    return StructuredTool.from_function(
+    return Tool.from_function(
         func=_run,
-        name="get_crypto_social_data",
-        description="Get social sentiment data for a cryptocurrency from sources like Twitter, Reddit, etc.",
-        args_schema=SocialSentimentInput,
+        name="get_x_trends",
+        description="Get current trending topics on X (Twitter).",
     )
 
-def get_news_tool(client: HashScopeClient) -> BaseTool:
-    """Create a tool for getting cryptocurrency news."""
+# Tool Definitions for Derivatives Market
+def get_funding_rates_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting funding rates."""
     
-    def _run(symbol: Optional[str] = None, limit: int = 10) -> str:
+    def _run() -> str:
         try:
-            result = client.get_news(symbol, limit)
+            rates = client.get_funding_rates()
+            response = "Current funding rates for major cryptocurrency futures markets:\n\n"
             
-            if symbol:
-                response = f"Latest {len(result['news'])} news for {symbol}:\n"
-            else:
-                response = f"Latest {len(result['news'])} cryptocurrency news:\n"
-            
-            for i, news in enumerate(result['news'], 1):
-                response += f"{i}. {news['title']}\n"
-                response += f"   Source: {news['source']} | Date: {news['date']}\n"
-                response += f"   {news['summary'][:100]}...\n\n"
+            for i, rate in enumerate(rates, 1):
+                response += f"{i}. {rate['symbol']} on {rate['exchange']}: {rate['rate']*100:.4f}%\n"
+                response += f"   Next funding time: {rate['next_funding_time']}, Interval: {rate['interval']}\n\n"
             
             return response
         except Exception as e:
-            return f"Error fetching news: {str(e)}"
+            return f"Error fetching funding rates: {str(e)}"
     
-    return StructuredTool.from_function(
+    return Tool.from_function(
         func=_run,
-        name="get_crypto_news",
-        description="Get latest news for cryptocurrencies.",
-        args_schema=NewsInput,
+        name="get_funding_rates",
+        description="Get current funding rates for major cryptocurrency futures markets.",
+    )
+
+def get_open_interest_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting open interest data."""
+    
+    def _run() -> str:
+        try:
+            data = client.get_open_interest()
+            response = "Open interest ratios for major cryptocurrency derivatives:\n\n"
+            
+            for i, item in enumerate(data, 1):
+                response += f"{i}. {item['symbol']} on {item['exchange']}:\n"
+                response += f"   Open Interest: {item['open_interest']} coins (${item['open_interest_usd']:,.2f})\n"
+                response += f"   24h Change: {item['change_24h']}%\n\n"
+            
+            return response
+        except Exception as e:
+            return f"Error fetching open interest data: {str(e)}"
+    
+    return Tool.from_function(
+        func=_run,
+        name="get_open_interest",
+        description="Get open interest ratios for major cryptocurrency derivatives.",
+    )
+
+# Tool Definitions for Blockchain Projects
+def get_hsk_updates_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting HashKey Chain updates."""
+    
+    def _run() -> str:
+        try:
+            updates = client.get_hsk_updates()
+            response = "Latest updates and developments from HashKey Chain:\n\n"
+            
+            for i, update in enumerate(updates, 1):
+                response += f"{i}. {update['title']}\n"
+                response += f"   Date: {update['date']}\n"
+                response += f"   Type: {update['type']}\n"
+                response += f"   Description: {update['description']}\n\n"
+            
+            return response
+        except Exception as e:
+            return f"Error fetching HSK updates: {str(e)}"
+    
+    return Tool.from_function(
+        func=_run,
+        name="get_hsk_updates",
+        description="Get latest updates and developments from HashKey Chain.",
+    )
+
+def get_ethereum_standards_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting Ethereum standards information."""
+    
+    def _run() -> str:
+        try:
+            standards = client.get_ethereum_standards()
+            response = "Information about new Ethereum standards and proposals:\n\n"
+            
+            for i, standard in enumerate(standards, 1):
+                response += f"{i}. EIP-{standard['eip_number']}: {standard['title']}\n"
+                response += f"   Status: {standard['status']}, Type: {standard['type']}, Category: {standard['category']}\n"
+                response += f"   Author: {standard['author']}, Created: {standard['created']}\n"
+                response += f"   Description: {standard['description']}\n\n"
+            
+            return response
+        except Exception as e:
+            return f"Error fetching Ethereum standards: {str(e)}"
+    
+    return Tool.from_function(
+        func=_run,
+        name="get_ethereum_standards",
+        description="Get information about new Ethereum standards and proposals.",
+    )
+
+def get_solana_updates_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting Solana updates."""
+    
+    def _run() -> str:
+        try:
+            updates = client.get_solana_updates()
+            response = "Latest updates and developments from Solana blockchain:\n\n"
+            
+            for i, update in enumerate(updates, 1):
+                response += f"{i}. {update['title']}\n"
+                response += f"   Date: {update['date']}\n"
+                response += f"   Type: {update['type']}\n"
+                response += f"   Description: {update['description']}\n\n"
+            
+            return response
+        except Exception as e:
+            return f"Error fetching Solana updates: {str(e)}"
+    
+    return Tool.from_function(
+        func=_run,
+        name="get_solana_updates",
+        description="Get latest updates and developments from Solana blockchain.",
+    )
+
+# Tool Definitions for Open Source
+def get_bitcoin_activity_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting Bitcoin Core repository activity."""
+    
+    def _run() -> str:
+        try:
+            activity = client.get_bitcoin_activity()
+            stats = activity['stats']
+            prs = activity['pull_requests']
+            
+            response = "Latest activities from Bitcoin Core repository:\n\n"
+            response += f"Repository Stats:\n"
+            response += f"- Stars: {stats['stars']:,}\n"
+            response += f"- Forks: {stats['forks']:,}\n"
+            response += f"- Open Issues: {stats['open_issues']:,}\n"
+            response += f"- Last Commit: {stats['last_commit']}\n"
+            response += f"- Release Version: {stats['release_version']}\n\n"
+            
+            response += f"Recent Pull Requests:\n"
+            for i, pr in enumerate(prs, 1):
+                response += f"{i}. {pr['title']} (#{pr['id']})\n"
+                response += f"   Author: {pr['author']}, State: {pr['state']}\n"
+                response += f"   Created: {pr['created_at']}, Comments: {pr['comments']}\n"
+                response += f"   Changes: +{pr['additions']}, -{pr['deletions']}\n\n"
+            
+            return response
+        except Exception as e:
+            return f"Error fetching Bitcoin Core activity: {str(e)}"
+    
+    return Tool.from_function(
+        func=_run,
+        name="get_bitcoin_activity",
+        description="Get latest pull requests, stars, and activities from Bitcoin Core repository.",
+    )
+
+def get_ethereum_activity_tool(client: HashScopeClient) -> BaseTool:
+    """Create a tool for getting Ethereum Core repositories activity."""
+    
+    def _run() -> str:
+        try:
+            activity = client.get_ethereum_activity()
+            
+            response = "Latest activities from Ethereum Core repositories:\n\n"
+            
+            # Go-Ethereum
+            go_eth = activity['go-ethereum']
+            response += f"Go-Ethereum Repository:\n"
+            response += f"- Stars: {go_eth['stats']['stars']:,}\n"
+            response += f"- Forks: {go_eth['stats']['forks']:,}\n"
+            response += f"- Open Issues: {go_eth['stats']['open_issues']:,}\n"
+            response += f"- Release Version: {go_eth['stats']['release_version']}\n\n"
+            
+            response += f"Recent Pull Requests:\n"
+            for i, pr in enumerate(go_eth['pull_requests'], 1):
+                response += f"{i}. {pr['title']} (#{pr['id']})\n"
+                response += f"   Author: {pr['author']}, State: {pr['state']}\n\n"
+            
+            # Consensus-Specs
+            cons_specs = activity['consensus-specs']
+            response += f"\nConsensus-Specs Repository:\n"
+            response += f"- Stars: {cons_specs['stats']['stars']:,}\n"
+            response += f"- Forks: {cons_specs['stats']['forks']:,}\n"
+            response += f"- Open Issues: {cons_specs['stats']['open_issues']:,}\n"
+            response += f"- Release Version: {cons_specs['stats']['release_version']}\n\n"
+            
+            response += f"Recent Pull Requests:\n"
+            for i, pr in enumerate(cons_specs['pull_requests'], 1):
+                response += f"{i}. {pr['title']} (#{pr['id']})\n"
+                response += f"   Author: {pr['author']}, State: {pr['state']}\n\n"
+            
+            return response
+        except Exception as e:
+            return f"Error fetching Ethereum Core activity: {str(e)}"
+    
+    return Tool.from_function(
+        func=_run,
+        name="get_ethereum_activity",
+        description="Get latest pull requests, stars, and activities from Ethereum Core repositories.",
     )

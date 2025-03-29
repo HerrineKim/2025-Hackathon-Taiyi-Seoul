@@ -5,7 +5,7 @@ HashScope MCP는 AI Agent가 HashScope API를 통해 암호화폐 데이터에 �
 ## 설치 방법
 
 ```bash
-pip install hashscope-mcp
+pip install -e .
 ```
 
 ## 사용 방법
@@ -21,8 +21,8 @@ from hashscope_mcp import HashScopeToolkit
 api_key_id = "hsk_your_api_key_id"
 api_key_secret = "sk_your_api_key_secret"
 
-# HashScope 도구 초기화
-toolkit = HashScopeToolkit(api_key_id=api_key_id, api_key_secret=api_key_secret)
+# HashScope 도구 초기화 (로컬 서버 사용)
+toolkit = HashScopeToolkit(api_key_id=api_key_id, api_key_secret=api_key_secret, base_url="https://hashkey.sungwoonsong.com")
 tools = toolkit.get_tools()
 
 # LangChain Agent 초기화
@@ -35,50 +35,69 @@ agent = initialize_agent(
 )
 
 # Agent 실행
-agent.run("비트코인의 현재 가격과 최근 시장 동향을 알려줘")
+agent.run("비트코인의 현재 가격과 김치 프리미엄을 알려줘")
 ```
 
 ### 개별 도구 사용
 
 ```python
 from hashscope_mcp import (
-    get_crypto_price_tool,
-    get_crypto_market_data_tool,
-    get_crypto_onchain_data_tool
+    get_btc_usd_tool,
+    get_btc_krw_tool,
+    get_kimchi_premium_tool
 )
 from hashscope_mcp.hashscope_client import HashScopeClient
 
 # HashScope 클라이언트 초기화
 client = HashScopeClient(
     api_key_id="hsk_your_api_key_id",
-    api_key_secret="sk_your_api_key_secret"
+    api_key_secret="sk_your_api_key_secret",
+    base_url="https://hashkey.sungwoonsong.com"
 )
 
 # 개별 도구 생성
-price_tool = get_crypto_price_tool(client)
-market_tool = get_crypto_market_data_tool(client)
-onchain_tool = get_crypto_onchain_data_tool(client)
+btc_usd_tool = get_btc_usd_tool(client)
+btc_krw_tool = get_btc_krw_tool(client)
+kimchi_premium_tool = get_kimchi_premium_tool(client)
 
 # 도구 사용
-btc_price = price_tool.run({"symbol": "BTC", "currency": "USD"})
-print(btc_price)
+btc_usd = btc_usd_tool.run()
+print(btc_usd)
 
-btc_market = market_tool.run({"symbol": "BTC"})
-print(btc_market)
+btc_krw = btc_krw_tool.run()
+print(btc_krw)
+
+kimchi_premium = kimchi_premium_tool.run()
+print(kimchi_premium)
 ```
 
 ## 사용 가능한 도구
 
 HashScope MCP는 다음과 같은 도구를 제공합니다:
 
-1. **get_crypto_price**: 암호화폐의 현재 가격 조회
-2. **get_crypto_historical_prices**: 암호화폐의 과거 가격 데이터 조회
-3. **get_crypto_market_data**: 시가총액, 거래량 등 시장 데이터 조회
-4. **get_trending_coins**: 인기 있는 암호화폐 목록 조회
-5. **get_crypto_onchain_data**: 온체인 데이터(활성 주소, 트랜잭션 수 등) 조회
-6. **get_wallet_balance**: 지갑 주소의 잔액 조회
-7. **get_crypto_social_data**: 소셜 미디어 감성 분석 데이터 조회
-8. **get_crypto_news**: 암호화폐 관련 최신 뉴스 조회
+### 암호화폐 데이터
+1. **get_btc_usd_price**: BTC/USD 가격 조회 (Binance)
+2. **get_btc_krw_price**: BTC/KRW 가격 조회 (Upbit)
+3. **get_usdt_krw_price**: USDT/KRW 가격 조회 (Upbit)
+4. **get_kimchi_premium**: 김치 프리미엄 조회
+
+### 소셜 미디어 데이터
+5. **get_trump_posts**: Donald Trump의 최신 포스트 조회
+6. **get_elon_posts**: Elon Musk의 최신 포스트 조회
+7. **get_x_trends**: X(Twitter) 트렌드 조회
+
+### 파생상품 시장 데이터
+8. **get_funding_rates**: 암호화폐 선물 시장의 펀딩 비율 조회
+9. **get_open_interest**: 암호화폐 파생상품의 미결제 약정 비율 조회
+
+### 블록체인 프로젝트 데이터
+10. **get_hsk_updates**: HashKey Chain의 최신 업데이트 조회
+11. **get_ethereum_standards**: 이더리움 표준 및 제안 정보 조회
+12. **get_solana_updates**: Solana 블록체인의 최신 업데이트 조회
+
+### 오픈소스 데이터
+13. **get_bitcoin_activity**: Bitcoin Core 저장소 활동 조회
+14. **get_ethereum_activity**: Ethereum Core 저장소 활동 조회
 
 ## 예제: LangChain과 함께 사용하기
 
@@ -92,7 +111,7 @@ api_key_id = "hsk_your_api_key_id"
 api_key_secret = "sk_your_api_key_secret"
 
 # HashScope 도구 초기화
-toolkit = HashScopeToolkit(api_key_id=api_key_id, api_key_secret=api_key_secret)
+toolkit = HashScopeToolkit(api_key_id=api_key_id, api_key_secret=api_key_secret, base_url="https://hashkey.sungwoonsong.com")
 tools = toolkit.get_tools()
 
 # LangChain Agent 초기화
@@ -107,10 +126,10 @@ agent = initialize_agent(
 # 복잡한 질문에 대한 응답
 response = agent.run("""
 다음 질문에 답해줘:
-1. 비트코인과 이더리움의 현재 가격은 얼마인가?
-2. 지난 30일 동안 비트코인의 가격 변화는 어떠했는가?
-3. 현재 가장 인기 있는 암호화폐 3개는 무엇인가?
-4. 비트코인에 대한 소셜 미디어 감성은 어떠한가?
+1. 비트코인의 현재 가격은 얼마인가? (USD와 KRW 모두)
+2. 현재 김치 프리미엄은 얼마인가?
+3. 최근 Elon Musk는 어떤 내용을 포스팅했는가?
+4. HashKey Chain의 최신 업데이트는 무엇인가?
 """)
 
 print(response)
@@ -120,7 +139,7 @@ print(response)
 
 HashScope API 키를 발급받으려면:
 
-1. [HashScope 웹사이트](https://hashscope.io)에 방문하여 계정을 생성합니다.
+1. [HashScope 웹사이트](https://hashscope.vercel.app/)에 방문하여 계정을 생성합니다.
 2. 대시보드에서 "API 키 관리" 섹션으로 이동합니다.
 3. "새 API 키 생성" 버튼을 클릭합니다.
 4. API 키 ID와 시크릿을 안전하게 저장합니다.
