@@ -22,6 +22,7 @@ from app.blockchain.contracts import (
     format_wei_to_hsk
 )
 from app.auth.dependencies import get_current_user, get_current_admin_user
+from app.utils.wallet import normalize_address, checksum_address, is_valid_address
 
 router = APIRouter(
     tags=["users"],
@@ -38,6 +39,14 @@ class UserResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        
+    def dict(self, *args, **kwargs):
+        # 기본 dict 메서드 호출
+        data = super().dict(*args, **kwargs)
+        # 지갑 주소를 체크섬 형식으로 변환
+        if 'wallet_address' in data:
+            data['wallet_address'] = checksum_address(data['wallet_address'])
+        return data
 
 # 트랜잭션 스키마
 class TransactionCreate(BaseModel):
@@ -115,6 +124,7 @@ def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 # 사용자 상세 조회
 @router.get("/{wallet_address}", response_model=UserResponse)
 def read_user(wallet_address: str, db: Session = Depends(get_db)):
+    wallet_address = normalize_address(wallet_address)
     user = db.query(User).filter(User.wallet_address == wallet_address).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -123,6 +133,7 @@ def read_user(wallet_address: str, db: Session = Depends(get_db)):
 # 사용자 잔액 조회
 @router.get("/{wallet_address}/balance")
 def read_user_balance(wallet_address: str, db: Session = Depends(get_db)):
+    wallet_address = normalize_address(wallet_address)
     user = db.query(User).filter(User.wallet_address == wallet_address).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -163,70 +174,97 @@ async def sign_deposit_transaction(
     Returns:
         서명된 트랜잭션 해시
     """
-    # 사용자 인증 확인
-    if current_user.wallet_address.lower() != request.wallet_address.lower():
+    # 지갑 주소 정규화
+    wallet_address = normalize_address(request.wallet_address)
+    
+    # 요청한 사용자와 서명할 지갑 주소가 일치하는지 확인
+    if current_user.wallet_address != wallet_address:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only sign transactions for your own wallet"
         )
     
     try:
-        # 트랜잭션 생성
-        tx = build_deposit_transaction(
-            from_address=request.wallet_address,
-            amount_wei=request.amount
-        )
+        # 예치 트랜잭션 생성
+        unsigned_tx = build_deposit_transaction(wallet_address, request.amount)
         
-        # 트랜잭션 서명 및 전송
-        tx_hash = sign_transaction(request.private_key, tx)
+        # 트랜잭션 서명
+        tx_hash = sign_transaction(unsigned_tx, request.private_key)
         
         return {
             "tx_hash": tx_hash,
             "amount": request.amount,
-            "message": f"트랜잭션이 성공적으로 서명되어 전송되었습니다. 트랜잭션 해시: {tx_hash}"
+            "message": f"Transaction signed and sent. Amount: {format_wei_to_hsk(request.amount)} HSK"
         }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"트랜잭션 서명 중 오류가 발생했습니다: {str(e)}"
+            detail=f"Failed to sign transaction: {str(e)}"
         )
 
 # 예치 트랜잭션 알림
 @router.post("/deposit/notify", response_model=TransactionStatusResponse)
 def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends(get_db)):
+    """
+    예치 트랜잭션이 완료되었음을 알립니다.
+    
+    - **tx_hash**: 트랜잭션 해시
+    
+    Returns:
+        트랜잭션 상태
+    """
     try:
         # 트랜잭션 검증
-        verification = verify_deposit_transaction(tx_data.tx_hash)
+        tx_info = verify_deposit_transaction(tx_data.tx_hash)
         
-        if verification["success"]:
-            # 사용자 조회
-            user = db.query(User).filter(User.wallet_address == verification["user"]).first()
-            
-            if not user:
-                # 새 사용자 생성 (User 모델에 맞게 수정)
-                user = User(
-                    wallet_address=verification["user"]
-                )
-                db.add(user)
-                db.commit()
-                db.refresh(user)
-            
-            # 트랜잭션 기록
+        if not tx_info:
+            return {"status": "pending", "message": "Transaction not found or still pending"}
+        
+        # 지갑 주소 정규화
+        wallet_address = normalize_address(tx_info["from"])
+        
+        # 사용자 조회
+        user = db.query(User).filter(User.wallet_address == wallet_address).first()
+        
+        if not user:
+            # 새 사용자 생성
+            user = User(
+                wallet_address=wallet_address,
+                balance=0,
+                is_admin=False,
+                created_at=datetime.utcnow(),
+                last_login_at=None
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        
+        # 트랜잭션 기록
+        tx = db.query(Transaction).filter(Transaction.tx_hash == tx_data.tx_hash).first()
+        
+        if not tx:
+            # 새 트랜잭션 생성
             tx = Transaction(
-                user_wallet=user.wallet_address,
+                user_wallet=wallet_address,
                 tx_hash=tx_data.tx_hash,
-                amount=verification["amount"],
+                amount=tx_info["value"],
                 tx_type="deposit",
-                status="confirmed"
+                status="confirmed",
+                created_at=datetime.utcnow()
             )
             db.add(tx)
             db.commit()
             
-            return {"status": "success", "message": "Deposit transaction verified and recorded"}
+            return {
+                "status": "confirmed", 
+                "message": f"Deposit confirmed: {format_wei_to_hsk(tx_info['value'])} HSK"
+            }
         else:
-            return {"status": "failed", "message": verification["message"]}
+            # 이미 처리된 트랜잭션
+            return {"status": tx.status, "message": "Transaction already processed"}
+            
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Error processing transaction: {str(e)}"}
 
 # 인출 정보 조회
 @router.get("/withdraw/info", response_model=WithdrawInfoResponse)
@@ -244,34 +282,51 @@ def request_withdraw(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # 사용자 인증 확인
-    if current_user.wallet_address.lower() != request.wallet_address.lower():
+    """
+    인출 요청을 생성합니다.
+    
+    - **wallet_address**: 인출할 지갑 주소
+    - **amount**: 인출할 금액 (wei 단위)
+    
+    Returns:
+        인출 요청 ID
+    """
+    # 지갑 주소 정규화
+    wallet_address = normalize_address(request.wallet_address)
+    
+    # 요청한 사용자와 인출할 지갑 주소가 일치하는지 확인
+    if current_user.wallet_address != wallet_address:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only request withdrawals for your own wallet"
+            detail="You can only withdraw to your own wallet"
         )
     
     # 잔액 확인
-    balance = get_balance(request.wallet_address)
+    balance = get_balance(wallet_address)
+    
     if balance < request.amount:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Insufficient balance. Available: {balance}, Requested: {request.amount}"
+            detail=f"Insufficient balance. Available: {format_wei_to_hsk(balance)} HSK"
         )
     
-    # 인출 요청 기록
+    # 트랜잭션 생성
     tx = Transaction(
-        user_wallet=current_user.wallet_address,
+        user_wallet=wallet_address,
         tx_hash="pending",
         amount=request.amount,
-        tx_type="withdraw_request",
-        status="pending"
+        tx_type="withdraw",
+        status="pending",
+        created_at=datetime.utcnow()
     )
     db.add(tx)
     db.commit()
     db.refresh(tx)
     
-    return {"message": "Withdrawal request submitted successfully", "request_id": tx.id}
+    return {
+        "message": f"Withdraw request created for {format_wei_to_hsk(request.amount)} HSK",
+        "request_id": tx.id
+    }
 
 # 인출 트랜잭션 알림
 @router.post("/withdraw/notify", response_model=TransactionStatusResponse)
@@ -280,33 +335,56 @@ def notify_withdraw_transaction(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
+    """
+    인출 트랜잭션이 완료되었음을 알립니다. (관리자 전용)
+    
+    - **tx_hash**: 트랜잭션 해시
+    
+    Returns:
+        트랜잭션 상태
+    """
     try:
         # 트랜잭션 검증
-        verification = verify_withdraw_transaction(tx_data.tx_hash)
+        tx_info = verify_withdraw_transaction(tx_data.tx_hash)
         
-        if verification["success"]:
-            # 사용자 조회
-            user = db.query(User).filter(User.wallet_address == verification["user"]).first()
-            
-            if not user:
-                return {"status": "failed", "message": "User not found"}
-            
-            # 트랜잭션 기록
+        if not tx_info:
+            return {"status": "pending", "message": "Transaction not found or still pending"}
+        
+        # 지갑 주소 정규화
+        wallet_address = normalize_address(tx_info["to"])
+        
+        # 사용자 조회
+        user = db.query(User).filter(User.wallet_address == wallet_address).first()
+        
+        if not user:
+            return {"status": "error", "message": "User not found"}
+        
+        # 트랜잭션 기록
+        tx = db.query(Transaction).filter(Transaction.tx_hash == tx_data.tx_hash).first()
+        
+        if not tx:
+            # 새 트랜잭션 생성
             tx = Transaction(
-                user_wallet=user.wallet_address,
+                user_wallet=wallet_address,
                 tx_hash=tx_data.tx_hash,
-                amount=verification["amount"],
+                amount=tx_info["value"],
                 tx_type="withdraw",
-                status="confirmed"
+                status="confirmed",
+                created_at=datetime.utcnow()
             )
             db.add(tx)
             db.commit()
             
-            return {"status": "success", "message": "Withdraw transaction verified and recorded"}
+            return {
+                "status": "confirmed", 
+                "message": f"Withdraw confirmed: {format_wei_to_hsk(tx_info['value'])} HSK"
+            }
         else:
-            return {"status": "failed", "message": verification["message"]}
+            # 이미 처리된 트랜잭션
+            return {"status": tx.status, "message": "Transaction already processed"}
+            
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Error processing transaction: {str(e)}"}
 
 # 사용량 차감 요청
 @router.post("/usage/deduct", response_model=UsageDeductResponse)
@@ -315,35 +393,56 @@ def deduct_for_usage(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    # 잔액 확인
-    balance = get_balance(request.wallet_address)
-    if balance < request.amount:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Insufficient balance. Available: {balance}, Requested: {request.amount}"
-        )
+    """
+    사용량에 따른 차감 요청을 생성합니다. (관리자 전용)
+    
+    - **wallet_address**: 차감할 지갑 주소
+    - **amount**: 차감할 금액 (wei 단위)
+    - **recipient_address**: 수신자 지갑 주소
+    
+    Returns:
+        차감 요청 ID
+    """
+    # 지갑 주소 정규화
+    wallet_address = normalize_address(request.wallet_address)
+    recipient_address = normalize_address(request.recipient_address)
     
     # 사용자 조회
-    user = db.query(User).filter(User.wallet_address == request.wallet_address).first()
+    user = db.query(User).filter(User.wallet_address == wallet_address).first()
+    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
     
-    # 사용량 차감 요청 기록
+    # 잔액 확인
+    balance = get_balance(wallet_address)
+    
+    if balance < request.amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Insufficient balance. Available: {format_wei_to_hsk(balance)} HSK"
+        )
+    
+    # 트랜잭션 생성
     tx = Transaction(
-        user_wallet=user.wallet_address,
+        user_wallet=wallet_address,
         tx_hash="pending",
         amount=request.amount,
-        tx_type="usage_request",
-        status="pending"
+        tx_type="usage_deduct",
+        status="pending",
+        created_at=datetime.utcnow(),
+        recipient=recipient_address
     )
     db.add(tx)
     db.commit()
     db.refresh(tx)
     
-    return {"message": "Usage deduction request submitted successfully", "request_id": tx.id}
+    return {
+        "message": f"Usage deduction request created for {format_wei_to_hsk(request.amount)} HSK",
+        "request_id": tx.id
+    }
 
 # 사용량 차감 트랜잭션 알림
 @router.post("/usage/notify", response_model=TransactionStatusResponse)
@@ -352,30 +451,55 @@ def notify_usage_deduction_transaction(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
+    """
+    사용량 차감 트랜잭션이 완료되었음을 알립니다. (관리자 전용)
+    
+    - **tx_hash**: 트랜잭션 해시
+    
+    Returns:
+        트랜잭션 상태
+    """
     try:
         # 트랜잭션 검증
-        verification = verify_usage_deduction_transaction(tx_data.tx_hash)
+        tx_info = verify_usage_deduction_transaction(tx_data.tx_hash)
         
-        if verification["success"]:
-            # 사용자 조회
-            user = db.query(User).filter(User.wallet_address == verification["user"]).first()
-            
-            if not user:
-                return {"status": "failed", "message": "User not found"}
-            
-            # 트랜잭션 기록
+        if not tx_info:
+            return {"status": "pending", "message": "Transaction not found or still pending"}
+        
+        # 지갑 주소 정규화
+        from_address = normalize_address(tx_info["from"])
+        to_address = normalize_address(tx_info["to"])
+        
+        # 사용자 조회
+        user = db.query(User).filter(User.wallet_address == from_address).first()
+        
+        if not user:
+            return {"status": "error", "message": "User not found"}
+        
+        # 트랜잭션 기록
+        tx = db.query(Transaction).filter(Transaction.tx_hash == tx_data.tx_hash).first()
+        
+        if not tx:
+            # 새 트랜잭션 생성
             tx = Transaction(
-                user_wallet=user.wallet_address,
+                user_wallet=from_address,
                 tx_hash=tx_data.tx_hash,
-                amount=verification["amount"],
-                tx_type="usage_deduction",
-                status="confirmed"
+                amount=tx_info["value"],
+                tx_type="usage_deduct",
+                status="confirmed",
+                created_at=datetime.utcnow(),
+                recipient=to_address
             )
             db.add(tx)
             db.commit()
             
-            return {"status": "success", "message": "Usage deduction transaction verified and recorded"}
+            return {
+                "status": "confirmed", 
+                "message": f"Usage deduction confirmed: {format_wei_to_hsk(tx_info['value'])} HSK"
+            }
         else:
-            return {"status": "failed", "message": verification["message"]}
+            # 이미 처리된 트랜잭션
+            return {"status": tx.status, "message": "Transaction already processed"}
+            
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Error processing transaction: {str(e)}"}

@@ -1,8 +1,11 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import validates
 
 from app.database import Base
+from app.utils.wallet import normalize_address, checksum_address
 
 class User(Base):
     __tablename__ = "users"
@@ -19,20 +22,36 @@ class User(Base):
 
     transactions = relationship("Transaction", back_populates="user")
     api_keys = relationship("APIKey", back_populates="user")
+    
+    @validates('wallet_address')
+    def validate_wallet_address(self, key, address):
+        """지갑 주소를 소문자로 정규화합니다."""
+        if address:
+            return normalize_address(address)
+        return address
 
 class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    user_wallet = Column(String, index=True)  # 사용자 지갑 주소
     tx_hash = Column(String, unique=True, index=True)
     amount = Column(Integer)  # wei 단위
     tx_type = Column(String)  # deposit, withdraw, withdraw_request, usage_request, usage_deduction
     status = Column(String)  # pending, confirmed, failed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    recipient = Column(String, nullable=True)  # 수신자 지갑 주소 (사용량 차감 시)
 
     user = relationship("User", back_populates="transactions")
+    
+    @validates('user_wallet', 'recipient')
+    def validate_wallet_address(self, key, address):
+        """지갑 주소를 소문자로 정규화합니다."""
+        if address:
+            return normalize_address(address)
+        return address
 
 class APIKey(Base):
     __tablename__ = "api_keys"
