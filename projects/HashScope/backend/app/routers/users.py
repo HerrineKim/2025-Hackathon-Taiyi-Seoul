@@ -243,9 +243,8 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
         tx = db.query(Transaction).filter(Transaction.tx_hash == tx_data.tx_hash).first()
         
         if not tx:
-            # 새 트랜잭션 생성
+            # 새 트랜잭션 생성 - user_id 필드 제외
             tx = Transaction(
-                user_id=user.id,  # 사용자 ID 참조
                 user_wallet=wallet_address,
                 tx_hash=tx_data.tx_hash,
                 amount=tx_info["amount"],
