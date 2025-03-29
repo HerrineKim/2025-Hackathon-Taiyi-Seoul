@@ -127,8 +127,6 @@ async function fetchUserProfile() {
 
 """,
     version="0.1.0",
-    docs_url=None,  # 기본 /docs 경로 비활성화
-    redoc_url=None,  # 기본 /redoc 경로 비활성화
 )
 
 # CORS 설정
