@@ -143,12 +143,13 @@ def get_api_key_with_tracking(
                 total_cost = sum(usage.cost for usage in unbilled_usages)
                 
                 try:
-                    # 관리자 주소 (수수료 수취 주소)
-                    admin_address = "0xDbCeE5A0F6804f36930EAA33aB4cef11a7964398"  # 예치 컨트랙트 주소
+                    # 관리자 주소 (수수료 수취 주소) - 실제 관리자 지갑 주소로 변경
+                    admin_address = "0xDbCeE5A0F6804f36930EAA33aB4cef11a7964398"  # 관리자 지갑 주소
                     
                     # 로그 기록 - 정확한 HSK 값 표시
                     print(f"Deducting {total_cost / 10**18:.6f} HSK from {user.wallet_address}")
                     print(f"Total cost in wei: {total_cost}")
+                    print(f"Fee recipient: {admin_address}")
                     
                     # 온체인에서 직접 차감 실행
                     success, result = deduct_for_usage(user.wallet_address, total_cost, admin_address)
