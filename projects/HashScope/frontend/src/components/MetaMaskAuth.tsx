@@ -275,85 +275,70 @@ export default function MetaMaskAuth() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center text-gray-900 mb-8">HashScope</h1>
-        
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 rounded-lg">
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
+    <div className="w-full">
+      {error && (
+        <div className="mb-6 p-4 bg-red-900/50 rounded-lg">
+          <p className="text-red-200">{error}</p>
+        </div>
+      )}
 
-        {isMetaMaskConnected && account && (
-          <div className="mb-6 p-4 bg-green-50 rounded-lg">
-            <h3 className="text-green-800 font-medium">Connected Account</h3>
-            <p className="text-sm text-green-700 mt-1">{account}</p>
-            {tokenBalance !== null && (
-              <p className="text-sm text-green-700 mt-1">HSK Balance: {tokenBalance}</p>
-            )}
-            <div className="w-full bg-green-200 rounded-full h-2.5 mt-2">
-              <div className="bg-green-600 h-2.5 rounded-full animate-pulse"></div>
+      {isMetaMaskConnected && account && (
+        <div className="mb-6 p-4 bg-green-900/50 rounded-lg">
+          <h3 className="text-green-200 font-medium">Connected Account</h3>
+          <p className="text-sm text-green-300 mt-1">{account}</p>
+          {tokenBalance !== null && (
+            <p className="text-sm text-green-300 mt-1">HSK Balance: {tokenBalance}</p>
+          )}
+          <div className="w-full bg-green-900/50 rounded-full h-2.5 mt-2">
+            <div className="bg-green-500 h-2.5 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+      )}
+
+      <section className="space-y-4">
+        <button
+          onClick={enableMetaMask}
+          disabled={loading || isMetaMaskConnected}
+          className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
+          {loading ? 'Connecting...' : isMetaMaskConnected ? 'Connected' : 'Connect Wallet'}
+        </button>
+
+        <button
+          onClick={loginWithMetaMask}
+          disabled={!isMetaMaskConnected || loading || isLoggedIn}
+          className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
+          {loading ? 'Logging in...' : isLoggedIn ? 'Already Logged In' : 'Login with Wallet'}
+        </button>
+        {apiKeys.length > 0 && (
+          <div className="mt-4 p-4 bg-purple-900/50 rounded-lg">
+            <h3 className="text-purple-200 font-medium mb-2">API Keys</h3>
+            <div className="space-y-2">
+              {apiKeys.map((key) => (
+                <div key={key.id} className="text-sm text-purple-300">
+                  <p>Name: {key.name}</p>
+                  <p>Created: {new Date(key.created_at).toLocaleString()}</p>
+                  <p>Last Used: {key.last_used ? new Date(key.last_used).toLocaleString() : 'Never'}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        <section className="space-y-4">
+        {isMetaMaskConnected && (
           <button
-            onClick={enableMetaMask}
-            disabled={loading || isMetaMaskConnected}
-            className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={logout}
+            disabled={loading}
+            className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
-            {loading ? 'Connecting...' : isMetaMaskConnected ? 'Connected' : 'Connect Wallet'}
+            Logout
           </button>
-
-          <button
-            onClick={loginWithMetaMask}
-            disabled={!isMetaMaskConnected || loading || isLoggedIn}
-            className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
-            {loading ? 'Logging in...' : isLoggedIn ? 'Already Logged In' : 'Login with Wallet'}
-          </button>
-
-          {isLoggedIn && (
-            <button
-              onClick={fetchApiKeys}
-              disabled={isLoadingApiKeys}
-              className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoadingApiKeys ? 'Loading API Keys...' : 'Test API Keys Endpoint'}
-            </button>
-          )}
-
-          {apiKeys.length > 0 && (
-            <div className="mt-4 p-4 bg-purple-50 rounded-lg">
-              <h3 className="text-purple-800 font-medium mb-2">API Keys</h3>
-              <div className="space-y-2">
-                {apiKeys.map((key) => (
-                  <div key={key.id} className="text-sm text-purple-700">
-                    <p>Name: {key.name}</p>
-                    <p>Created: {new Date(key.created_at).toLocaleString()}</p>
-                    <p>Last Used: {key.last_used ? new Date(key.last_used).toLocaleString() : 'Never'}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isMetaMaskConnected && (
-            <button
-              onClick={logout}
-              disabled={loading}
-              className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Image src="/MetaMask_Fox.svg" alt="MetaMask Fox" className="w-6 h-6 mr-2" width={24} height={24} />
-              Logout
-            </button>
-          )}
-        </section>
-      </div>
+        )}
+      </section>
     </div>
   );
 } 
