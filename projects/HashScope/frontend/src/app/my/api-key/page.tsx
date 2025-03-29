@@ -165,6 +165,29 @@ export default function SecretPage() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-white">API Key Management</h1>
         
+        {/* API Host Information */}
+        <Card className="mb-8 bg-gray-700 border-gray-600">
+          <CardHeader>
+            <CardTitle className="text-white">API Host Information</CardTitle>
+            <CardDescription className="text-gray-400">Base URL for all API endpoints</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2">
+              <code className="bg-gray-800 px-3 py-2 rounded text-white font-mono">
+                {process.env.NEXT_PUBLIC_API_BASE_URL || 'https://hashkey.sungwoonsong.com'}
+              </code>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => copyToClipboard(process.env.NEXT_PUBLIC_API_BASE_URL || 'https://hashkey.sungwoonsong.com')}
+                className="text-gray-400 hover:text-white"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
         {/* Create New API Key Form */}
         <Card className="mb-8 bg-gray-700 border-gray-600">
           <CardHeader>

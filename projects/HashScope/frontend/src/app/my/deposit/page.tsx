@@ -242,13 +242,20 @@ export default function DepositPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="depositAmount" className="text-gray-300">Deposit Amount (HSK)</Label>
+                  <p className="text-sm text-gray-400">Minimum deposit amount: 0.001 HSK</p>
                   <Input
                     id="depositAmount"
                     type="number"
                     min="0.001"
                     step="0.001"
+                    max="1000000"
                     value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || (parseFloat(value) >= 0.001 && parseFloat(value) <= 1000000)) {
+                        setDepositAmount(value);
+                      }
+                    }}
                     className="bg-gray-800 border-gray-600 text-white"
                   />
                 </div>
