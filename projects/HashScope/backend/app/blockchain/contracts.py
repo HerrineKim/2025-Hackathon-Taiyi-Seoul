@@ -14,6 +14,9 @@ w3 = Web3(Web3.HTTPProvider(HSK_RPC_URL))
 # 예치 컨트랙트 주소 설정
 DEPOSIT_CONTRACT_ADDRESS = os.getenv("DEPOSIT_CONTRACT_ADDRESS")
 
+# 컨트랙트 소유자 개인키 설정
+CONTRACT_OWNER_PRIVATE_KEY = os.getenv("CONTRACT_OWNER_PRIVATE_KEY")
+
 # 예치 컨트랙트 ABI 로드
 with open("app/blockchain/abi/HSKDeposit.json", "r") as f:
     DEPOSIT_CONTRACT_ABI = json.load(f)
@@ -217,32 +220,68 @@ def verify_usage_deduction_transaction(tx_hash):
     사용량 차감 트랜잭션을 검증합니다.
     """
     try:
-        # 트랜잭션 정보 가져오기
+        # 트랜잭션 조회
         tx_receipt = w3.eth.get_transaction_receipt(tx_hash)
+        if not tx_receipt or not tx_receipt.get('status'):
+            return False, "트랜잭션이 실패했거나 존재하지 않습니다."
         
-        # 트랜잭션이 성공했는지 확인
-        if tx_receipt and tx_receipt["status"] == 1:
-            # 이벤트 로그에서 UsageDeduction 이벤트 찾기
-            for log in tx_receipt["logs"]:
-                if log["address"].lower() == DEPOSIT_CONTRACT_ADDRESS.lower():
-                    # 이벤트 디코딩
-                    try:
-                        event = deposit_contract.events.UsageDeduction().process_receipt(tx_receipt)
-                        if event:
-                            for ev in event:
-                                return {
-                                    "user": ev["args"]["user"],
-                                    "amount": ev["args"]["amount"],
-                                    "recipient": ev["args"]["recipient"],
-                                    "success": True
-                                }
-                    except Exception as e:
-                        print(f"Error decoding event: {e}")
+        # 이벤트 로그 확인
+        logs = deposit_contract.events.UsageDeducted().process_receipt(tx_receipt)
+        if not logs:
+            return False, "UsageDeducted 이벤트가 없습니다."
         
-        return {"success": False, "message": "Transaction failed or no UsageDeduction event found"}
+        return True, logs[0].args
     except Exception as e:
-        print(f"Error verifying usage deduction transaction: {e}")
-        return {"success": False, "message": str(e)}
+        return False, str(e)
+
+def deduct_usage_fee(user_address, amount_wei):
+    """
+    사용자의 예치금에서 API 사용 수수료를 차감합니다.
+    
+    Args:
+        user_address (str): 사용자 지갑 주소
+        amount_wei (int): 차감할 금액 (wei 단위)
+        
+    Returns:
+        tuple: (성공 여부, 트랜잭션 해시 또는 오류 메시지)
+    """
+    try:
+        if not CONTRACT_OWNER_PRIVATE_KEY:
+            return False, "컨트랙트 소유자 개인키가 설정되지 않았습니다."
+        
+        # 주소를 체크섬 주소로 변환
+        user_address = Web3.to_checksum_address(user_address)
+        
+        # 사용자의 현재 잔액 확인
+        balance = deposit_contract.functions.getBalance(user_address).call()
+        if balance < amount_wei:
+            return False, f"잔액 부족: {wei_to_hsk(balance)} HSK (필요: {wei_to_hsk(amount_wei)} HSK)"
+        
+        # 트랜잭션 생성
+        nonce = w3.eth.get_transaction_count(w3.eth.account.from_key(CONTRACT_OWNER_PRIVATE_KEY).address)
+        gas_price = w3.eth.gas_price
+        
+        # deductUsageFee 함수 호출 트랜잭션 생성
+        tx = deposit_contract.functions.deductUsageFee(
+            user_address,
+            amount_wei
+        ).build_transaction({
+            'chainId': w3.eth.chain_id,
+            'gas': 200000,  # 가스 한도 설정
+            'gasPrice': gas_price,
+            'nonce': nonce,
+        })
+        
+        # 트랜잭션 서명
+        signed_tx = w3.eth.account.sign_transaction(tx, CONTRACT_OWNER_PRIVATE_KEY)
+        
+        # 트랜잭션 전송
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        
+        # 트랜잭션 해시 반환
+        return True, w3.to_hex(tx_hash)
+    except Exception as e:
+        return False, f"차감 실패: {str(e)}"
 
 def get_transaction_status(tx_hash):
     """

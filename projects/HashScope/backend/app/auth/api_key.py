@@ -6,6 +6,7 @@ import hashlib
 
 from app.database import get_db
 from app.models import APIKey, APIUsage, User, Transaction
+from app.blockchain.contracts import deduct_usage_fee
 
 def verify_api_key(
     api_key_id: str = Header(..., alias="api-key-id"),
@@ -144,22 +145,34 @@ def get_api_key_with_tracking(
                     # 관리자 주소 (수수료 수취 주소)
                     admin_address = "0xDbCeE5A0F6804f36930EAA33aB4cef11a7964398"  # 예치 컨트랙트 주소
                     
-                    # 로그 기록
-                    print(f"Deducting {total_cost / 10**18} HSK from {user.wallet_address}")
+                    # 로그 기록 - 정확한 HSK 값 표시
+                    print(f"Deducting {total_cost / 10**18:.6f} HSK from {user.wallet_address}")
+                    print(f"Total cost in wei: {total_cost}")
+                    
+                    # 온체인에서 직접 차감 실행
+                    success, result = deduct_usage_fee(user.wallet_address, total_cost)
+                    
+                    if success:
+                        tx_hash = result
+                        status = "pending"
+                        print(f"Successfully deducted usage fee. Transaction hash: {tx_hash}")
+                    else:
+                        tx_hash = "failed"
+                        status = "failed"
+                        print(f"Failed to deduct usage fee: {result}")
                     
                     # Transaction 모델에 차감 요청 기록
                     tx = Transaction(
                         user_wallet=user.wallet_address,
-                        tx_hash="pending",
+                        tx_hash=tx_hash,
                         amount=total_cost,
                         tx_type="usage_deduct",
-                        status="pending",
-                        created_at=now,
-                        recipient=admin_address
+                        status=status,
+                        created_at=now
                     )
                     db.add(tx)
                     
-                    # 청구 완료로 표시
+                    # 청구 완료로 표시 (성공 여부와 관계없이)
                     for usage in unbilled_usages:
                         usage.is_billed = True
                     
