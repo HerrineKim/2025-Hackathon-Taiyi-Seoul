@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { ethers } from "ethers"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface DepositInfo {
   message: string
@@ -43,13 +45,14 @@ const HSKDepositABI = [
 ]
 
 // HSK network settings
-const HSK_RPC_URL = process.env.NEXT_PUBLIC_HSK_RPC_URL || 'https://mainnet.hsk.xyz'
+// const HSK_RPC_URL = process.env.NEXT_PUBLIC_HSK_RPC_URL || 'https://mainnet.hsk.xyz'
 
 export default function DepositPage() {
   const [depositInfo, setDepositInfo] = useState<DepositInfo | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [account, setAccount] = useState<string | null>(null)
   const [userBalance, setUserBalance] = useState('0')
+  const [depositAmount, setDepositAmount] = useState('0.1')
 
   useEffect(() => {
     checkConnection()
@@ -90,14 +93,24 @@ export default function DepositPage() {
   }
 
   const fetchUserBalance = async (userAddress: string) => {
-    if (!depositInfo?.deposit_address) return
-
     try {
-      const provider = new ethers.providers.JsonRpcProvider(HSK_RPC_URL)
-      const contract = new ethers.Contract(depositInfo.deposit_address, HSKDepositABI, provider)
-      
-      const balance = await contract.getBalance(userAddress)
-      setUserBalance(ethers.utils.formatEther(balance))
+      const token = localStorage.getItem("authToken")
+      if (!token) {
+        throw new Error("No authentication token found")
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/${userAddress}/balance`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch balance")
+      }
+
+      const data = await response.json()
+      setUserBalance(data.formatted_balance || '0')
     } catch (error) {
       console.error('Balance fetch error:', error)
       toast.error("Failed to fetch balance")
@@ -135,6 +148,13 @@ export default function DepositPage() {
   const handleDeposit = async () => {
     if (!depositInfo || !account) return
 
+    // Validate deposit amount
+    const amount = parseFloat(depositAmount)
+    if (isNaN(amount) || amount < 0.001) {
+      toast.error("Deposit amount must be at least 0.001 HSK")
+      return
+    }
+
     setIsLoading(true)
     try {
       if (!window.ethereum) {
@@ -153,7 +173,7 @@ export default function DepositPage() {
       const contract = new ethers.Contract(depositInfo.deposit_address, HSKDepositABI, signer)
 
       // Convert amount to wei
-      const amountWei = ethers.utils.parseEther(depositInfo.amount.toString())
+      const amountWei = ethers.utils.parseEther(depositAmount)
 
       // Call deposit function
       const tx = await contract.deposit({ value: amountWei })
@@ -161,6 +181,33 @@ export default function DepositPage() {
 
       // Wait for transaction confirmation
       await tx.wait()
+
+      // Notify backend about the successful deposit
+      try {
+        const token = localStorage.getItem("authToken")
+        if (!token) {
+          throw new Error("No authentication token found")
+        }
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/deposit/notify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            tx_hash: tx.hash,
+            tx_type: "deposit"
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to notify deposit transaction")
+        }
+      } catch (error) {
+        console.error('Failed to notify backend:', error)
+        toast.error("Failed to notify backend")
+      }
 
       // Update balance after successful deposit
       await fetchUserBalance(account)
@@ -189,15 +236,20 @@ export default function DepositPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Current Balance</p>
-                <p>{userBalance} HSK</p>
+                <p>{userBalance}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Deposit Amount</p>
-                <p>{depositInfo.amount} HSK</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Message</p>
-                <p>{depositInfo.message}</p>
+              <div className="space-y-2">
+                <Label htmlFor="depositAmount" className="text-gray-500">Deposit Amount (HSK)</Label>
+                <Input
+                  id="depositAmount"
+                  type="number"
+                  min="0.001"
+                  step="0.001"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white"
+                />
+                <p className="text-xs text-gray-500">Minimum deposit amount: 0.001 HSK</p>
               </div>
               <Button
                 onClick={handleDeposit}
