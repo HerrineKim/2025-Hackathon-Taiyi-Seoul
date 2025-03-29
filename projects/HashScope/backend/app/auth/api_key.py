@@ -5,7 +5,7 @@ from typing import Optional
 import hashlib
 
 from app.database import get_db
-from app.models import APIKey, APIUsage
+from app.models import APIKey, APIUsage, User, Transaction
 
 def verify_api_key(
     api_key_id: str = Header(..., alias="api-key-id"),
@@ -95,4 +95,82 @@ def get_api_key_with_tracking(
     Returns:
         APIKey: 검증된 API 키 객체
     """
-    return verify_api_key(api_key_id, api_key_secret, request, db)
+    # API 키 검증
+    api_key = verify_api_key(api_key_id, api_key_secret, request, db)
+    
+    # 현재 시간 기록
+    now = datetime.utcnow()
+    
+    # API 사용량 추적
+    if request:
+        # 엔드포인트 및 메서드 정보 추출
+        path = request.url.path
+        method = request.method
+        
+        # 콜당 비용 설정 (0.001 HSK = 10^15 wei)
+        cost_per_call = 10**15  # 0.001 HSK in wei
+        
+        # API 사용량 기록
+        usage = APIUsage(
+            api_key_id=api_key.id,
+            endpoint=path,
+            method=method,
+            timestamp=now,
+            cost=cost_per_call,
+            is_billed=False
+        )
+        db.add(usage)
+        
+        # API 키 사용 횟수 증가 및 마지막 사용 시간 업데이트
+        api_key.call_count += 1
+        api_key.last_used_at = now
+        
+        # 사용자 정보 가져오기
+        user = db.query(User).filter(User.id == api_key.user_id).first()
+        
+        if user:
+            # 미청구된 사용량 계산
+            unbilled_usages = db.query(APIUsage).filter(
+                APIUsage.api_key_id == api_key.id,
+                APIUsage.is_billed == False
+            ).all()
+            
+            # 미청구 사용량이 10개 이상이면 실제 차감 진행
+            if len(unbilled_usages) >= 10:
+                # 총 차감 비용 계산
+                total_cost = sum(usage.cost for usage in unbilled_usages)
+                
+                try:
+                    # 관리자 주소 (수수료 수취 주소)
+                    admin_address = "0xDbCeE5A0F6804f36930EAA33aB4cef11a7964398"  # 예치 컨트랙트 주소
+                    
+                    # 로그 기록
+                    print(f"Deducting {total_cost / 10**18} HSK from {user.wallet_address}")
+                    
+                    # Transaction 모델에 차감 요청 기록
+                    tx = Transaction(
+                        user_wallet=user.wallet_address,
+                        tx_hash="pending",
+                        amount=total_cost,
+                        tx_type="usage_deduct",
+                        status="pending",
+                        created_at=now,
+                        recipient=admin_address
+                    )
+                    db.add(tx)
+                    
+                    # 청구 완료로 표시
+                    for usage in unbilled_usages:
+                        usage.is_billed = True
+                    
+                    # 변경사항 저장
+                    db.commit()
+                    
+                except Exception as e:
+                    print(f"Error deducting usage cost: {str(e)}")
+                    # 오류가 발생해도 API 키는 반환
+            else:
+                # 변경사항 저장
+                db.commit()
+    
+    return api_key
