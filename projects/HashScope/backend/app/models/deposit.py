@@ -8,7 +8,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_wallet = Column(String, ForeignKey("users.wallet_address"))
     tx_hash = Column(String, unique=True, index=True)
     amount = Column(Integer)  # wei 단위
     tx_type = Column(String)  # deposit, withdraw, withdraw_request, usage_request, usage_deduction

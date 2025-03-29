@@ -86,7 +86,7 @@ async def create_api_key(
     api_key = APIKey(
         key_id=key_pair["key_id"],
         secret_key_hash=key_pair["secret_key_hash"],
-        user_id=current_user.id,
+        user_wallet=current_user.wallet_address,
         name=api_key_data.name,
         rate_limit_per_minute=api_key_data.rate_limit_per_minute,
         expires_at=calculate_expiry_date(days=365)
@@ -119,7 +119,7 @@ async def list_api_keys(
     
     Requires authentication via JWT token.
     """
-    api_keys = db.query(APIKey).filter(APIKey.user_id == current_user.id).all()
+    api_keys = db.query(APIKey).filter(APIKey.user_wallet == current_user.wallet_address).all()
     return api_keys
 
 @router.get("/{key_id}", response_model=APIKeyResponse, summary="Get API key details")
@@ -139,7 +139,7 @@ async def get_api_key(
     """
     api_key = db.query(APIKey).filter(
         APIKey.key_id == key_id,
-        APIKey.user_id == current_user.id
+        APIKey.user_wallet == current_user.wallet_address
     ).first()
     
     if not api_key:
@@ -167,7 +167,7 @@ async def get_api_key_usage(
     """
     api_key = db.query(APIKey).filter(
         APIKey.key_id == key_id,
-        APIKey.user_id == current_user.id
+        APIKey.user_wallet == current_user.wallet_address
     ).first()
     
     if not api_key:
@@ -201,7 +201,7 @@ async def delete_api_key(
     """
     api_key = db.query(APIKey).filter(
         APIKey.key_id == key_id,
-        APIKey.user_id == current_user.id
+        APIKey.user_wallet == current_user.wallet_address
     ).first()
     
     if not api_key:

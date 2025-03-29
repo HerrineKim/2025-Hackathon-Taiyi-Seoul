@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel, Field
 import os
+from datetime import datetime
 
 from app.database import get_db
 from app.models import User, Transaction
@@ -23,46 +24,28 @@ from app.blockchain.contracts import (
 from app.auth.dependencies import get_current_user, get_current_admin_user
 
 router = APIRouter(
-    prefix="/users",
     tags=["users"],
     responses={404: {"description": "Not found"}},
 )
 
 # 사용자 스키마
-class UserCreate(BaseModel):
-    username: str
-    email: str
-    wallet_address: str
-
 class UserResponse(BaseModel):
-    id: int
-    username: str
-    email: str
     wallet_address: str
     balance: int = 0
+    is_admin: bool = False
+    created_at: datetime
+    last_login_at: Optional[datetime] = None
 
     class Config:
         orm_mode = True
 
 # 트랜잭션 스키마
 class TransactionCreate(BaseModel):
-    user_id: int
+    user_wallet: str
     tx_hash: str
     amount: int
-    tx_type: str = "deposit"  # deposit, withdraw, usage
-    status: str = "pending"  # pending, confirmed, failed
-
-class TransactionResponse(BaseModel):
-    id: int
-    user_id: int
-    tx_hash: str
-    amount: int
-    tx_type: str
-    status: str
-    created_at: str
-
-    class Config:
-        orm_mode = True
+    tx_type: str = "deposit"
+    status: str = "pending"
 
 # 예치 요청 스키마
 class DepositRequest(BaseModel):
@@ -123,19 +106,6 @@ class TransactionStatusResponse(BaseModel):
     status: str
     message: Optional[str] = None
 
-# 사용자 생성
-@router.post("/", response_model=UserResponse)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = User(
-        username=user.username,
-        email=user.email,
-        wallet_address=user.wallet_address
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
 # 사용자 목록 조회
 @router.get("/", response_model=List[UserResponse])
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -143,25 +113,25 @@ def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return users
 
 # 사용자 상세 조회
-@router.get("/{user_id}", response_model=UserResponse)
-def read_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+@router.get("/{wallet_address}", response_model=UserResponse)
+def read_user(wallet_address: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.wallet_address == wallet_address).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 # 사용자 잔액 조회
-@router.get("/{user_id}/balance")
-def read_user_balance(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+@router.get("/{wallet_address}/balance")
+def read_user_balance(wallet_address: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.wallet_address == wallet_address).first()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
     # 블록체인에서 실제 잔액 조회
-    balance = get_balance(user.wallet_address)
+    balance = get_balance(wallet_address)
     
     return {
-        "wallet_address": user.wallet_address,
+        "wallet_address": wallet_address,
         "balance_wei": balance,
         "balance_hsk": wei_to_hsk(balance),
         "formatted_balance": format_wei_to_hsk(balance)
@@ -245,7 +215,7 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
             
             # 트랜잭션 기록
             tx = Transaction(
-                user_id=user.id,
+                user_wallet=user.wallet_address,
                 tx_hash=tx_data.tx_hash,
                 amount=verification["amount"],
                 tx_type="deposit",
@@ -293,7 +263,7 @@ def request_withdraw(
     
     # 인출 요청 기록
     tx = Transaction(
-        user_id=current_user.id,
+        user_wallet=current_user.wallet_address,
         tx_hash="pending",
         amount=request.amount,
         tx_type="withdraw_request",
@@ -325,7 +295,7 @@ def notify_withdraw_transaction(
             
             # 트랜잭션 기록
             tx = Transaction(
-                user_id=user.id,
+                user_wallet=user.wallet_address,
                 tx_hash=tx_data.tx_hash,
                 amount=verification["amount"],
                 tx_type="withdraw",
@@ -365,7 +335,7 @@ def deduct_for_usage(
     
     # 사용량 차감 요청 기록
     tx = Transaction(
-        user_id=user.id,
+        user_wallet=user.wallet_address,
         tx_hash="pending",
         amount=request.amount,
         tx_type="usage_request",
@@ -397,7 +367,7 @@ def notify_usage_deduction_transaction(
             
             # 트랜잭션 기록
             tx = Transaction(
-                user_id=user.id,
+                user_wallet=user.wallet_address,
                 tx_hash=tx_data.tx_hash,
                 amount=verification["amount"],
                 tx_type="usage_deduction",

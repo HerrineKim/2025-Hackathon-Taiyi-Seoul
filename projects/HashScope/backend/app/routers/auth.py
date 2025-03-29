@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 import secrets
 import string
+from datetime import datetime
 
 from app.database import get_db
 from app.models import User
@@ -52,10 +53,8 @@ async def get_nonce(request: NonceRequest, db: Session = Depends(get_db)):
         # Update existing user's nonce
         user.nonce = nonce
     else:
-        # Create new user
-        username = f"user_{secrets.token_hex(4)}"
-        email = f"{username}@example.com"
-        user = User(wallet_address=wallet_address, username=username, email=email)
+        # Create new user with wallet address only
+        user = User(wallet_address=wallet_address, nonce=nonce)
         db.add(user)
     
     db.commit()
@@ -102,6 +101,10 @@ async def verify_wallet_signature(request: VerifySignatureRequest, db: Session =
     
     # Generate new nonce for security (prevent replay attacks)
     user.nonce = generate_nonce()
+    
+    # Update last login time
+    user.last_login_at = datetime.utcnow()
+    
     db.commit()
     
     # Create access token
