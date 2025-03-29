@@ -1,5 +1,4 @@
-import { Home } from "lucide-react"
-import Image from "next/image"
+import { Home, Flame, Search, Info, Activity, User } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -11,12 +10,39 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-// Menu items.
-const items = [
+const mainItems = [
   {
     title: "Home",
     url: "/",
     icon: Home,
+  },
+  {
+    title: "Hot",
+    url: "/hot",
+    icon: Flame,
+  },
+  {
+    title: "Search APIs",
+    url: "/search",
+    icon: Search,
+  },
+  {
+    title: "About Tier",
+    url: "/about",
+    icon: Info,
+  },
+]
+
+const myItems = [
+  {
+    title: "Usage",
+    url: "/my/usage",
+    icon: Activity,
+  },
+  {
+    title: "Profile",
+    url: "/my/profile",
+    icon: User,
   },
 ]
 
@@ -26,11 +52,29 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="mb-4">
-            <Image src="/logo-500.png" alt="logo" width={32} height={32} />
+            Main Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {mainItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <a href={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>My</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {myItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <a href={item.url}>

@@ -29,7 +29,7 @@ export default function Header() {
 
   return (
     <header className="bg-gray-800 border-b border-gray-200">
-      <div className="mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto px-4">
         <div className="flex justify-between items-center h-14 sm:h-16">
           <div className="flex-1 flex items-center">
             <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">

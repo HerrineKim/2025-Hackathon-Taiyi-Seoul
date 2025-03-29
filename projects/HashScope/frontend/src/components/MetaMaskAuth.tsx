@@ -236,6 +236,7 @@ export default function MetaMaskAuth() {
     }
   };
 
+  // TODO: Remove this after testing
   const fetchApiKeys = async () => {
     try {
       setIsLoadingApiKeys(true);
@@ -250,7 +251,12 @@ export default function MetaMaskAuth() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: "test",
+          rate_limit_per_minute: 60
+        })
       });
 
       if (!response.ok) {
