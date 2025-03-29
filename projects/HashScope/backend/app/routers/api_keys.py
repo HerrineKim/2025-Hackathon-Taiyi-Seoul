@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Path
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime, timedelta
 import secrets
 import hashlib
+from sqlalchemy import func
 
 from app.database import get_db
-from app.models import User, APIKey
+from app.models import User, APIKey, APIUsage
 from app.auth.dependencies import get_current_user
 from pydantic import BaseModel, Field
 
@@ -45,6 +46,19 @@ class APIKeyUsage(BaseModel):
     last_used_at: Optional[datetime] = None
     rate_limit_per_minute: int
     token_consumption_rate: float
+
+class APIEndpointUsage(BaseModel):
+    endpoint: str
+    method: str
+    call_count: int
+    last_used_at: Optional[datetime] = None
+    total_cost: float
+
+class APIKeyHistoryResponse(BaseModel):
+    key_id: str
+    total_calls: int
+    total_cost: float
+    endpoints: List[APIEndpointUsage]
 
 # API 키 생성 및 관리 유틸리티 함수
 def generate_api_key_pair():
@@ -182,6 +196,76 @@ async def get_api_key_usage(
         "last_used_at": api_key.last_used_at,
         "rate_limit_per_minute": api_key.rate_limit_per_minute,
         "token_consumption_rate": api_key.token_consumption_rate
+    }
+
+@router.get("/{key_id}/history", response_model=APIKeyHistoryResponse, summary="Get API key usage history")
+async def get_api_key_history(
+    key_id: str = Path(..., description="The ID of the API key"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    특정 API 키의 호출 히스토리를 조회합니다.
+    
+    - **key_id**: API 키 ID
+    
+    반환값:
+    - 총 호출 횟수
+    - 총 비용
+    - 엔드포인트별 호출 통계 (엔드포인트, HTTP 메서드, 호출 횟수, 마지막 호출 시간, 총 비용)
+    
+    JWT 토큰을 통한 인증이 필요합니다.
+    """
+    # API 키 존재 여부 확인
+    api_key = db.query(APIKey).filter(
+        APIKey.key_id == key_id,
+        APIKey.user_id == current_user.id
+    ).first()
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="API key not found"
+        )
+    
+    # API 키 ID로 API 사용량 기록 조회
+    api_usages = db.query(APIUsage).filter(
+        APIUsage.api_key_id == api_key.id
+    ).all()
+    
+    # 엔드포인트별 통계 계산
+    endpoint_stats = {}
+    total_calls = 0
+    total_cost = 0.0
+    
+    for usage in api_usages:
+        endpoint_key = f"{usage.method}:{usage.endpoint}"
+        total_calls += 1
+        total_cost += usage.cost
+        
+        if endpoint_key not in endpoint_stats:
+            endpoint_stats[endpoint_key] = {
+                "endpoint": usage.endpoint,
+                "method": usage.method,
+                "call_count": 1,
+                "last_used_at": usage.timestamp,
+                "total_cost": usage.cost
+            }
+        else:
+            endpoint_stats[endpoint_key]["call_count"] += 1
+            endpoint_stats[endpoint_key]["total_cost"] += usage.cost
+            if usage.timestamp > endpoint_stats[endpoint_key]["last_used_at"]:
+                endpoint_stats[endpoint_key]["last_used_at"] = usage.timestamp
+    
+    # 엔드포인트별 통계를 리스트로 변환
+    endpoints = [APIEndpointUsage(**stats) for stats in endpoint_stats.values()]
+    
+    # 결과 반환
+    return {
+        "key_id": api_key.key_id,
+        "total_calls": total_calls,
+        "total_cost": total_cost,
+        "endpoints": endpoints
     }
 
 @router.delete("/{key_id}", summary="Delete API key")
