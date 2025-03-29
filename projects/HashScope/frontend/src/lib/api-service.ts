@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 export interface APIKey {
@@ -42,40 +40,67 @@ export interface APICategoriesResponse {
 
 const apiService = {
   async listAPIKeys(): Promise<APIKey[]> {
-    const response = await axios.get(`${API_BASE_URL}/api-keys/`, {
+    const response = await fetch(`${API_BASE_URL}/api-keys/`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
     });
-    return response.data;
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
   },
 
   async createAPIKey(data: CreateAPIKeyRequest): Promise<CreateAPIKeyResponse> {
-    const response = await axios.post(`${API_BASE_URL}/api-keys/`, data, {
+    const response = await fetch(`${API_BASE_URL}/api-keys/`, {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
+      body: JSON.stringify(data),
     });
-    return response.data;
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
   },
 
   async listAPICatalog(category?: string): Promise<APICatalogResponse> {
-    const response = await axios.get(`${API_BASE_URL}/api-catalog/list`, {
-      params: { category },
+    const url = new URL(`${API_BASE_URL}/api-catalog/list`);
+    if (category) {
+      url.searchParams.append('category', category);
+    }
+    
+    const response = await fetch(url.toString(), {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
     });
-    return response.data;
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
   },
 
   async listAPICategories(): Promise<APICategoriesResponse> {
-    const response = await axios.get(`${API_BASE_URL}/api-catalog/categories`, {
+    const response = await fetch(`${API_BASE_URL}/api-catalog/categories`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
     });
-    return response.data;
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
   },
 };
 
