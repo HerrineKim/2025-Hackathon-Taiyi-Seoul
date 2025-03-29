@@ -29,8 +29,8 @@ Our core mission is to create a decentralized bridge between real-world informat
 
 ## Team
 
-- SeungWoon Song - PM, Backend
-- Hyerin Kim - Design, Frontend
+- SeungWoon Song - PM, Backend (0xDbCeE5A0F6804f36930EAA33aB4cef11a7964398)
+- Hyerin Kim - Design, Frontend (0xdEcBa0C08ca92D302Ad037AB708496466B89bc23)
 
 ## API Flow
 
