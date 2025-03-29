@@ -33,7 +33,6 @@ export default function Header() {
         <div className="flex justify-between items-center h-14 sm:h-16">
           <div className="flex-1 flex items-center">
             <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
-              <Image src="/logo-500.png" alt="Logo" className="w-8 h-8 mr-2" width={20} height={20} />
               <span className="text-gray-100 text-lg sm:text-xl font-semibold">HashScope</span>
             </Link>
           </div>

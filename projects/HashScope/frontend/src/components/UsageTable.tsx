@@ -15,97 +15,100 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useEffect, useState } from "react";
 
-export type UsageData = {
-  id: string;
-  apiName: string;
-  totalUsage: number;
-  totalCost: number;
-  category: string;
+export type ApiKeyData = {
+  key_id: string;
+  name: string;
+  last_used_at: string;
+  call_count: number;
 };
 
-const mockData: UsageData[] = [
+export const columns: ColumnDef<ApiKeyData>[] = [
   {
-    id: "1",
-    apiName: "HSK Latest Block",
-    totalUsage: 1500,
-    totalCost: 150,
-    category: "On-chain data"
-  },
-  {
-    id: "2",
-    apiName: "HSK Exchange Inflow",
-    totalUsage: 800,
-    totalCost: 80,
-    category: "On-chain data"
-  },
-  {
-    id: "3",
-    apiName: "BTC Price",
-    totalUsage: 3000,
-    totalCost: 300,
-    category: "Exchange Data"
-  },
-  {
-    id: "4",
-    apiName: "HSK Price",
-    totalUsage: 2500,
-    totalCost: 250,
-    category: "Exchange Data"
-  },
-  {
-    id: "5",
-    apiName: "Trump Social Media",
-    totalUsage: 500,
-    totalCost: 1000,
-    category: "Social Media"
-  },
-  {
-    id: "6",
-    apiName: "Elon Musk Social Media",
-    totalUsage: 400,
-    totalCost: 800,
-    category: "Social Media"
-  }
-];
-
-export const columns: ColumnDef<UsageData>[] = [
-  {
-    accessorKey: "id",
+    id: "index",
     header: "Index",
     cell: ({ row }) => {
-      return <div className="font-medium text-center">{Number(row.original.id)}</div>;
+      return <div className="font-medium text-center">{row.index + 1}</div>;
     },
   },
   {
-    accessorKey: "apiName",
-    header: "API Name",
+    accessorKey: "name",
+    header: "API Key Name(ID)",
     cell: ({ row }) => {
-      return <div className="font-medium">{row.original.apiName}</div>;
+      return <div className="font-medium"><span className="text-gray-400">{row.original.name}</span> ({row.original.key_id})</div>;
     },
   },
   {
-    accessorKey: "totalUsage",
-    header: "Total Usage",
+    accessorKey: "last_used_at",
+    header: "Last use",
     cell: ({ row }) => {
-      return <div className="text-right font-medium">{row.original.totalUsage.toLocaleString()}</div>;
+      const date = new Date(row.original.last_used_at);
+      return <div className="font-medium">{date.toLocaleString()}</div>;
     },
   },
   {
-    accessorKey: "totalCost",
-    header: "Total Cost (HSK)",
+    accessorKey: "call_count",
+    header: "Calls",
     cell: ({ row }) => {
-      return <div className="text-right font-medium">{row.original.totalCost.toLocaleString()}</div>;
+      return <div className="text-right font-medium">{row.original.call_count.toLocaleString()}</div>;
     },
   },
 ];
 
 export function UsageTable() {
+  const [data, setData] = useState<ApiKeyData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchApiKeys = async () => {
+      try {
+        const response = await fetch('https://hashkey.sungwoonsong.com/api-keys/', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch API keys');
+        }
+
+        const apiKeys = await response.json();
+        setData(apiKeys);
+      } catch (error) {
+        console.error('Error fetching API keys:', error);
+        setError('Failed to fetch API keys. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchApiKeys();
+  }, []);
+
   const table = useReactTable({
-    data: mockData,
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white">Loading API keys...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-md border border-gray-700">
@@ -152,7 +155,7 @@ export function UsageTable() {
                 colSpan={columns.length}
                 className="h-24 text-center text-white"
               >
-                No results.
+                No API keys found.
               </TableCell>
             </TableRow>
           )}

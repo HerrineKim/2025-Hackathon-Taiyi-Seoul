@@ -36,7 +36,7 @@ const mainItems = [
 
 const myItems = [
   {
-    title: "Usage",
+    title: "API Key Usage",
     url: "/my/usage",
     icon: Activity,
   },
@@ -46,8 +46,8 @@ const myItems = [
     icon: Wallet,
   },
   {
-    title: "Secret",
-    url: "/secret",
+    title: "API Key",
+    url: "/my/api-key",
     icon: Key,
   },
   {
