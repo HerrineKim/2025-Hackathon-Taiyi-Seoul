@@ -125,8 +125,8 @@ def get_api_key_with_tracking(
         api_key.call_count += 1
         api_key.last_used_at = now
         
-        # 사용자 정보 가져오기
-        user = db.query(User).filter(User.id == api_key.user_id).first()
+        # 사용자 정보 가져오기 - user_id로 조회
+        user = db.query(User).filter(User.wallet_address == api_key.user.wallet_address).first()
         
         if user:
             # 미청구된 사용량 계산
