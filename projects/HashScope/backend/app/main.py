@@ -122,8 +122,7 @@ async function fetchUserProfile() {
 
 ## Smart Contract Addresses
 
-- **HSK Token Contract**: 0x5073D9411b2179dfeA7c7D8841AF2B3472F8Bf2d
-- **Deposit Contract**: 0x2fA7FCFB4935963EB3B9ec2Def931b28a2Ff349f
+- **Deposit Contract**: 0x0D313B22601E7AD450DC9b8b78aB0b0014022269
 
 """,
     version="0.1.0",
@@ -156,10 +155,7 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="HashScope API",
         version="1.0.0",
-        description="""
-# HashScope API
-
-HashScope API는 HSK 네트워크의 네이티브 HSK를 관리하기 위한 API입니다.
+        description="""HashScope API는 HSK 네트워크의 네이티브 HSK를 관리하기 위한 API입니다.
 
 ## 주요 기능
 
@@ -204,48 +200,72 @@ const response = await fetch('https://api.hashscope.io/crypto/btc-price', {
 });
 ```
 
+## 지갑 인증 방식
+
+지갑 인증은 다음 단계로 이루어집니다:
+
+1. `/auth/nonce` 엔드포인트를 호출하여 서명할 메시지를 받습니다.
+2. 받은 메시지를 지갑으로 서명합니다.
+3. 서명된 메시지와 지갑 주소를 `/auth/verify` 엔드포인트로 전송하여 검증합니다.
+4. 검증이 성공하면 JWT 토큰이 발급됩니다.
+5. 발급받은 JWT 토큰을 `Authorization: Bearer {token}` 헤더에 포함하여 요청합니다.
+
 ## 컨트랙트 주소
-- **HSK 예치 컨트랙트**: `{deposit_contract_address}`
+- **HSK 예치 컨트랙트**: 0x0D313B22601E7AD450DC9b8b78aB0b0014022269
 
 ## 참고 사항
-- HSK 네트워크의 RPC URL: `{hsk_rpc_url}`
+- HSK 네트워크의 RPC URL: https://mainnet.hsk.xyz
 - 모든 금액은 wei 단위로 표시됩니다 (1 HSK = 10^18 wei).
-        """.format(
-            deposit_contract_address=os.getenv("DEPOSIT_CONTRACT_ADDRESS", "0x0D313B22601E7AD450DC9b8b78aB0b0014022269"),
-            hsk_rpc_url=os.getenv("HSK_RPC_URL", "https://mainnet.hsk.xyz")
-        ),
+""",
         routes=app.routes,
     )
     
     # API 키 인증 보안 스키마 정의
-    openapi_schema["components"]["securitySchemes"] = {
-        "ApiKeyId": {
-            "type": "apiKey",
-            "in": "header",
-            "name": "api-key-id",
-            "description": "API 키 ID (필수)"
-        },
-        "ApiKeySecret": {
-            "type": "apiKey",
-            "in": "header",
-            "name": "api-key-secret",
-            "description": "API 키 Secret (필수)"
-        }
+    if "components" not in openapi_schema:
+        openapi_schema["components"] = {}
+    
+    if "securitySchemes" not in openapi_schema["components"]:
+        openapi_schema["components"]["securitySchemes"] = {}
+    
+    # API 키 인증 스키마 추가
+    openapi_schema["components"]["securitySchemes"]["ApiKeyId"] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "api-key-id",
+        "description": "API 키 ID (필수)"
     }
     
-    # 모든 API 엔드포인트에 보안 요구사항 적용
-    if "security" not in openapi_schema:
-        openapi_schema["security"] = []
+    openapi_schema["components"]["securitySchemes"]["ApiKeySecret"] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "api-key-secret",
+        "description": "API 키 Secret (필수)"
+    }
     
-    # 기본적으로 모든 엔드포인트에 API 키 인증 적용 (auth 관련 엔드포인트 제외)
+    # JWT 인증 스키마 추가
+    openapi_schema["components"]["securitySchemes"]["BearerAuth"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 토큰 인증"
+    }
+    
+    # OAuth2PasswordBearer 스키마 제거
+    if "securitySchemes" in openapi_schema["components"]:
+        if "OAuth2PasswordBearer" in openapi_schema["components"]["securitySchemes"]:
+            del openapi_schema["components"]["securitySchemes"]["OAuth2PasswordBearer"]
+    
+    # 전역 보안 요구사항 설정
+    openapi_schema["security"] = [{"ApiKeyId": [], "ApiKeySecret": []}]
+    
+    # auth 관련 엔드포인트와 루트 엔드포인트는 보안 요구사항 제외
     for path in openapi_schema["paths"]:
-        # auth 관련 엔드포인트는 제외
-        if not path.startswith("/auth") and not path == "/" and not path == "/health":
-            for method in openapi_schema["paths"][path]:
-                if "security" not in openapi_schema["paths"][path][method]:
-                    openapi_schema["paths"][path][method]["security"] = [
-                        {"ApiKeyId": [], "ApiKeySecret": []}
-                    ]
+        if path.startswith("/auth") or path == "/" or path == "/health":
+            path_item = openapi_schema["paths"][path]
+            for method_key in list(path_item.keys()):
+                # 유효한 HTTP 메서드인지 확인
+                if method_key.lower() in ["get", "post", "put", "delete", "options", "head", "patch", "trace"]:
+                    path_item[method_key]["security"] = []
     
     app.openapi_schema = openapi_schema
     return app.openapi_schema
@@ -275,14 +295,4 @@ async def custom_swagger_ui_html():
         swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-bundle.js",
         swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css",
         swagger_favicon_url="/favicon.ico",
-    )
-
-# Custom OpenAPI schema
-@app.get("/openapi.json", include_in_schema=False)
-async def get_open_api_endpoint():
-    return get_openapi(
-        title=app.title,
-        version=app.version,
-        description=app.description,
-        routes=app.routes,
     )
