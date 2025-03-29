@@ -24,12 +24,20 @@ class APICatalogResponse(BaseModel):
 # API 카테고리 정의 - 실용적인 정보 API만 포함
 API_CATEGORIES = {
     "crypto": "Cryptocurrency Data",
+    "social": "Social Media",
+    "derivatives": "Derivatives Market",
+    "projects": "Blockchain Projects",
+    "opensource": "Open Source",
     # 새로운 실용적 정보 카테고리는 여기에 추가
 }
 
 # 태그와 카테고리 매핑 - 실용적인 정보 API만 포함
 TAG_TO_CATEGORY = {
     "Cryptocurrency Data": "crypto",
+    "Social Media": "social",
+    "Derivatives Market": "derivatives",
+    "Blockchain Projects": "projects",
+    "Open Source": "opensource",
     # 새로운 태그-카테고리 매핑은 여기에 추가
 }
 
@@ -53,7 +61,7 @@ EXCLUDED_CATEGORIES = {
 
 # 포함할 카테고리 - 실용적인 정보 API만 포함
 INCLUDED_CATEGORIES = {
-    "crypto", "api_catalog"
+    "crypto", "social", "derivatives", "projects", "opensource", "api_catalog"
 }
 
 # 경로에서 카테고리 추출하는 함수

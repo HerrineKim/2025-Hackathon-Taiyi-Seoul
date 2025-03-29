@@ -56,6 +56,36 @@ This project builds an API platform on the HSK blockchain, providing real-time c
 | `/crypto/kimchi-premium` | GET | Get kimchi premium percentage between Korean and global markets |
 | `/crypto/prices` | GET | Get major cryptocurrency prices (BTC, ETH, XRP) |
 
+### Social Media APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/social/trump` | GET | Get Donald Trump's latest posts from Truth Social |
+| `/social/elon` | GET | Get Elon Musk's latest posts from X (Twitter) |
+| `/social/x/trends` | GET | Get current trending topics on X (Twitter) |
+
+### Derivatives Market APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/derivatives/funding-rates` | GET | Get current funding rates for major cryptocurrency futures markets |
+| `/derivatives/open-interest` | GET | Get open interest ratios for major cryptocurrency derivatives |
+
+### Blockchain Projects APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/projects/hsk` | GET | Get latest updates and developments from HashKey Chain |
+| `/projects/ethereum/standards` | GET | Get information about new Ethereum standards and proposals |
+| `/projects/solana` | GET | Get latest updates and developments from Solana blockchain |
+
+### Open Source APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/opensource/bitcoin` | GET | Get latest pull requests, stars, and activities from Bitcoin Core repository |
+| `/opensource/ethereum` | GET | Get latest pull requests, stars, and activities from Ethereum Core repositories |
+
 ### API Management Endpoints
 
 | Endpoint | Method | Description |
