@@ -6,8 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSDK } from '@metamask/sdk-react';
-import { Loader2, Copy, Check } from 'lucide-react';
+import { Loader2, Copy, Check, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ApiKey {
   key_id: string;
@@ -37,7 +45,7 @@ export default function SecretPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showKeyId, setShowKeyId] = useState<{ [key: string]: boolean }>({});
+  const [deleteKeyId, setDeleteKeyId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     rate_limit_per_minute: 60
@@ -103,6 +111,39 @@ export default function SecretPage() {
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
       toast.error('Failed to copy to clipboard');
+    }
+  };
+
+  const deleteApiKey = async (keyId: string) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api-keys/${keyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete API key');
+      
+      toast.success('API key deleted successfully');
+      fetchApiKeys(); // Refresh the list
+    } catch (error) {
+      toast.error('Failed to delete API key');
+      console.error('Error deleting API key:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (keyId: string) => {
+    setDeleteKeyId(keyId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteKeyId) {
+      await deleteApiKey(deleteKeyId);
+      setDeleteKeyId(null);
     }
   };
 
@@ -199,14 +240,6 @@ export default function SecretPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setShowSecret(!showSecret)}
-                      className="border-gray-600 hover:bg-gray-700 text-gray-300"
-                    >
-                      {showSecret ? "Hide" : "Show"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
                       onClick={() => copyToClipboard(newKey.secret_key)}
                       className="border-gray-600 hover:bg-gray-700 text-gray-300"
                     >
@@ -236,31 +269,11 @@ export default function SecretPage() {
               <div className="space-y-4">
                 {apiKeys.map((key) => (
                   <Card key={key.key_id} className="bg-gray-800 border-gray-700">
-                    <CardContent className="pt-8 pb-6">
+                    <CardContent>
                       <div className="flex justify-between items-start">
                         <div className="space-y-2">
                           <h3 className="font-semibold text-white">{key.name || 'Unnamed Key'}</h3>
-                          <div className="flex items-center space-x-2">
-                            <p className="text-sm text-gray-400">
-                              ID: {showKeyId[key.key_id] ? key.key_id : '••••••••••••••••'}
-                            </p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setShowKeyId(prev => ({ ...prev, [key.key_id]: !prev[key.key_id] }))}
-                              className="h-6 px-2 text-xs text-gray-400 hover:text-gray-300"
-                            >
-                              {showKeyId[key.key_id] ? 'Hide' : 'Show'}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(key.key_id)}
-                              className="h-6 px-2 text-xs text-gray-400 hover:text-gray-300"
-                            >
-                              {copied ? 'Copied!' : 'Copy'}
-                            </Button>
-                          </div>
+                          <p className="text-sm text-gray-400">ID: {key.key_id}</p>
                           <p className="text-sm text-gray-400">
                             Created: {new Date(key.created_at).toLocaleDateString()}
                           </p>
@@ -280,6 +293,15 @@ export default function SecretPage() {
                           }`}>
                             {key.is_active ? 'Active' : 'Inactive'}
                           </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClick(key.key_id)}
+                            className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                            disabled={isLoading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -289,6 +311,41 @@ export default function SecretPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Delete Confirmation Modal */}
+        <Dialog open={!!deleteKeyId} onOpenChange={() => setDeleteKeyId(null)}>
+          <DialogContent className="bg-gray-800 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Delete API Key</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Are you sure you want to delete this API key? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteKeyId(null)}
+                className="bg-gray-700 text-gray-300 hover:bg-gray-600"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteConfirm}
+                className="bg-red-600 text-white hover:bg-red-700"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
