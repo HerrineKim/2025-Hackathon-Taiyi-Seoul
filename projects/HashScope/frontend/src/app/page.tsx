@@ -19,7 +19,7 @@ export default function Home() {
             AI-powered crypto market prediction and automated trading platform on HSK Chain
           </p>
           <Link
-            href={connected ? "/hot" : "/my/profile"}
+            href={connected ? "/hot" : "/my/deposit"}
             className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-lg transition-colors"
           >
             {connected ? 'Explore Hot APIs' : 'Get Started'} <ArrowRight className="ml-2 w-5 h-5" />
