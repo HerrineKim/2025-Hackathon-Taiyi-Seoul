@@ -78,7 +78,7 @@ export function TopBar() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-16 bg-gray-600" />
                 ) : (
-                  `${tokenBalance?.toLocaleString() || '0'} HSK`
+                  `${tokenBalance || '0'} HSK`
                 )}
               </span>
             </div>
