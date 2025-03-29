@@ -46,7 +46,10 @@ def get_balance(address):
     사용자의 예치된 HSK 잔액을 조회합니다.
     """
     try:
-        balance = deposit_contract.functions.getBalance(address).call()
+        # 주소를 체크섬 주소로 변환
+        checksum_addr = Web3.to_checksum_address(address)
+        print(f"Converting address {address} to checksum format: {checksum_addr}")
+        balance = deposit_contract.functions.getBalance(checksum_addr).call()
         return balance
     except Exception as e:
         print(f"Error getting balance: {e}")
@@ -142,7 +145,10 @@ def verify_deposit_transaction(tx_hash):
         if tx_receipt and tx_receipt["status"] == 1:
             # 이벤트 로그에서 Deposit 이벤트 찾기
             for log in tx_receipt["logs"]:
-                if log["address"].lower() == DEPOSIT_CONTRACT_ADDRESS.lower():
+                # 체크섬 주소로 변환하여 비교
+                contract_addr = Web3.to_checksum_address(DEPOSIT_CONTRACT_ADDRESS)
+                log_addr = Web3.to_checksum_address(log["address"])
+                if log_addr == contract_addr:
                     # 이벤트 디코딩
                     try:
                         event = deposit_contract.events.Deposit().process_receipt(tx_receipt)
@@ -159,12 +165,16 @@ def verify_deposit_transaction(tx_hash):
             # Deposit 이벤트를 찾지 못했지만 트랜잭션이 성공한 경우
             # 일반 전송일 수 있으므로 트랜잭션 정보 확인
             tx = w3.eth.get_transaction(tx_hash)
-            if tx and tx["to"] and tx["to"].lower() == DEPOSIT_CONTRACT_ADDRESS.lower():
-                return {
-                    "user": tx["from"],
-                    "amount": tx["value"],
-                    "success": True
-                }
+            if tx and tx["to"]:
+                # 체크섬 주소로 변환하여 비교
+                contract_addr = Web3.to_checksum_address(DEPOSIT_CONTRACT_ADDRESS)
+                tx_to_addr = Web3.to_checksum_address(tx["to"])
+                if tx_to_addr == contract_addr:
+                    return {
+                        "user": tx["from"],
+                        "amount": tx["value"],
+                        "success": True
+                    }
         
         return {"success": False, "message": "Transaction failed or no Deposit event found"}
     except Exception as e:

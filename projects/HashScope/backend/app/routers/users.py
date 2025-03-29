@@ -142,7 +142,7 @@ def read_user_balance(wallet_address: str, db: Session = Depends(get_db)):
     balance = get_balance(wallet_address)
     
     return {
-        "wallet_address": wallet_address,
+        "wallet_address": checksum_address(wallet_address),
         "balance_wei": balance,
         "balance_hsk": wei_to_hsk(balance),
         "formatted_balance": format_wei_to_hsk(balance)
@@ -255,9 +255,36 @@ def notify_deposit_transaction(tx_data: TransactionNotify, db: Session = Depends
             db.add(tx)
             
             # 사용자 잔액 업데이트 (블록체인에서 최신 잔액 조회)
-            blockchain_balance = get_balance(wallet_address)
-            user.balance = blockchain_balance
-            db.commit()
+            try:
+                # 블록체인에서 잔액 조회
+                blockchain_balance = get_balance(wallet_address)
+                print(f"Blockchain balance for {wallet_address}: {blockchain_balance}")
+                
+                # 현재 DB에 저장된 잔액 확인
+                current_db_balance = user.balance or 0
+                print(f"Current DB balance for {wallet_address}: {current_db_balance}")
+                
+                # 트랜잭션 금액
+                deposit_amount = tx_info["amount"]
+                print(f"Deposit amount: {deposit_amount}")
+                
+                # 두 가지 방법으로 잔액 업데이트 시도
+                # 1. 블록체인 잔액 사용
+                if blockchain_balance > 0:
+                    user.balance = blockchain_balance
+                    print(f"Updated balance from blockchain: {blockchain_balance}")
+                # 2. 현재 DB 잔액 + 트랜잭션 금액
+                else:
+                    new_balance = current_db_balance + deposit_amount
+                    user.balance = new_balance
+                    print(f"Updated balance by adding deposit amount: {new_balance}")
+                
+                db.commit()
+                print(f"Final user balance after commit: {user.balance}")
+            except Exception as e:
+                print(f"Error updating balance: {str(e)}")
+                # 오류가 발생해도 트랜잭션은 기록
+                db.commit()
             
             return {
                 "status": "confirmed", 
