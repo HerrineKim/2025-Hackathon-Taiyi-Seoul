@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional
 import hashlib
+import uuid
 
 from app.database import get_db
 from app.models import APIKey, APIUsage, User, Transaction
-from app.blockchain.contracts import deduct_usage_fee
+from app.blockchain.contracts import deduct_for_usage
 
 def verify_api_key(
     api_key_id: str = Header(..., alias="api-key-id"),
@@ -150,14 +151,15 @@ def get_api_key_with_tracking(
                     print(f"Total cost in wei: {total_cost}")
                     
                     # 온체인에서 직접 차감 실행
-                    success, result = deduct_usage_fee(user.wallet_address, total_cost)
+                    success, result = deduct_for_usage(user.wallet_address, total_cost, admin_address)
                     
                     if success:
                         tx_hash = result
                         status = "pending"
                         print(f"Successfully deducted usage fee. Transaction hash: {tx_hash}")
                     else:
-                        tx_hash = "failed"
+                        # 실패 시 고유한 ID 생성 (중복 방지)
+                        tx_hash = f"failed-{uuid.uuid4()}"
                         status = "failed"
                         print(f"Failed to deduct usage fee: {result}")
                     

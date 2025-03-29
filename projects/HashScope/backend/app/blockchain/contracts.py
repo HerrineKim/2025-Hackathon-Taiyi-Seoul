@@ -234,13 +234,14 @@ def verify_usage_deduction_transaction(tx_hash):
     except Exception as e:
         return False, str(e)
 
-def deduct_usage_fee(user_address, amount_wei):
+def deduct_for_usage(user_address, amount_wei, recipient_address):
     """
     사용자의 예치금에서 API 사용 수수료를 차감합니다.
     
     Args:
         user_address (str): 사용자 지갑 주소
         amount_wei (int): 차감할 금액 (wei 단위)
+        recipient_address (str): 수수료 수취 주소
         
     Returns:
         tuple: (성공 여부, 트랜잭션 해시 또는 오류 메시지)
@@ -251,6 +252,7 @@ def deduct_usage_fee(user_address, amount_wei):
         
         # 주소를 체크섬 주소로 변환
         user_address = Web3.to_checksum_address(user_address)
+        recipient_address = Web3.to_checksum_address(recipient_address)
         
         # 사용자의 현재 잔액 확인
         balance = deposit_contract.functions.getBalance(user_address).call()
@@ -261,10 +263,11 @@ def deduct_usage_fee(user_address, amount_wei):
         nonce = w3.eth.get_transaction_count(w3.eth.account.from_key(CONTRACT_OWNER_PRIVATE_KEY).address)
         gas_price = w3.eth.gas_price
         
-        # deductUsageFee 함수 호출 트랜잭션 생성
-        tx = deposit_contract.functions.deductUsageFee(
+        # deductForUsage 함수 호출 트랜잭션 생성
+        tx = deposit_contract.functions.deductForUsage(
             user_address,
-            amount_wei
+            amount_wei,
+            recipient_address
         ).build_transaction({
             'chainId': w3.eth.chain_id,
             'gas': 200000,  # 가스 한도 설정
