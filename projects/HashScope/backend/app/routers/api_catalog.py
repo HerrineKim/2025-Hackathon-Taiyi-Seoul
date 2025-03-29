@@ -23,7 +23,7 @@ class APICatalogResponse(BaseModel):
 
 # API 카테고리 정의 - 실용적인 정보 API만 포함
 API_CATEGORIES = {
-    "crypto": "암호화폐 데이터",
+    "crypto": "Cryptocurrency Data",
     # 새로운 실용적 정보 카테고리는 여기에 추가
 }
 
