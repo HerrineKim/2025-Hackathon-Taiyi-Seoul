@@ -12,6 +12,11 @@ export default function Home() {
       <main className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full py-12">
         {/* Hero Section */}
         <div className="text-center mb-8">
+          <img 
+            src="/logo-500.png" 
+            alt="HashScope Logo" 
+            className="w-32 h-32 mx-auto mb-6"
+          />
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6">
             HashScope
           </h1>
