@@ -5,9 +5,6 @@ from pydantic import BaseModel
 import inspect
 import re
 
-from app.auth.api_key import get_api_key_with_tracking
-from app.models import APIKey
-
 router = APIRouter()
 
 # API 정보를 담는 모델
@@ -145,8 +142,7 @@ def set_app_instance(app):
 @router.get("/list", response_model=APICatalogResponse, summary="API 목록 조회")
 async def get_api_list(
     request: Request,
-    category: Optional[str] = Query(None, description="필터링할 API 카테고리"),
-    api_key: APIKey = Depends(get_api_key_with_tracking)
+    category: Optional[str] = Query(None, description="필터링할 API 카테고리")
 ):
     """
     제공 가능한 API 목록을 조회합니다.
@@ -187,8 +183,7 @@ async def get_api_list(
 # 카테고리 목록 조회 엔드포인트
 @router.get("/categories", summary="API 카테고리 목록 조회")
 async def get_categories(
-    request: Request,
-    api_key: APIKey = Depends(get_api_key_with_tracking)
+    request: Request
 ):
     """
     사용 가능한 API 카테고리 목록을 조회합니다.
